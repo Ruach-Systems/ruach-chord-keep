@@ -1,0 +1,16 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ChordLibrary.Core/ChordLibrary.Core.csproj" />
+    <Project Path="src/ChordLibrary.Native/ChordLibrary.Native.csproj" />
+    <Project Path="src/ChordLibrary.Preview/ChordLibrary.Preview.csproj" />
+    <Project Path="src/ChordLibrary.Shared/ChordLibrary.Shared.csproj" />
+  </Folder>
+  <Folder Name="/supabase/" />
+  <Folder Name="/supabase/tests/">
+    <Project Path="supabase/tests/ChordLibrary.Supabase.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ChordLibrary.Shared.Tests/ChordLibrary.Shared.Tests.csproj" />
+    <Project Path="tests/ChordLibrary.Tests/ChordLibrary.Tests.csproj" />
+  </Folder>
+</Solution>

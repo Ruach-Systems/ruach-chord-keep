@@ -1,0 +1,9 @@
+@page "/"
+@using Microsoft.AspNetCore.Components.Web
+@using static Microsoft.AspNetCore.Components.Web.RenderMode
+@namespace ChordLibrary.Preview
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/><base href="/"/><title>Chord Library — native UI preview</title><link rel="stylesheet" href="_content/ChordLibrary.Shared/css/style.css"/><link rel="stylesheet" href="_content/ChordLibrary.Shared/css/native.css"/></head>
+<body><div id="app"><ChordLibrary.Shared.LibraryShell @rendermode="new InteractiveServerRenderMode(prerender: false)"/></div>
+<div id="blazor-error-ui" role="alert">The preview disconnected. Reload to reconnect to your saved library.</div>
+<script src="_content/ChordLibrary.Shared/js/native-bridge.js"></script><script src="_content/ChordLibrary.Shared/js/loader.js"></script><script src="preview.js"></script><script src="_framework/blazor.web.js"></script></body></html>

@@ -1,0 +1,20 @@
+#app, #library-root {height:100%;}
+.native-overlay {position:fixed;inset:0;z-index:20000;background:#0009;display:flex;align-items:center;justify-content:center;padding:16px;}
+.native-dialog {background:var(--bg-secondary);color:var(--text-primary);border:1px solid var(--border-color);border-radius:18px;padding:24px;width:min(100%,520px);max-height:90dvh;overflow:auto;box-shadow:0 24px 70px #0006;}
+.native-dialog h2 {font-size:1.3rem;margin-bottom:12px;}
+.native-dialog p {margin:10px 0;color:var(--text-secondary);}
+.native-dialog label {display:block;margin:12px 0 5px;font-size:.9rem;}
+.native-dialog input,.native-dialog textarea {width:100%;background:var(--bg-primary);color:var(--text-primary);border:1px solid var(--border-color);padding:11px;border-radius:8px;}
+.native-dialog textarea {height:180px;font:12px var(--font-mono);}
+.native-actions {display:flex;gap:8px;flex-wrap:wrap;margin-top:18px;}
+.native-actions .btn {flex-grow:1;}
+.native-dialog details {margin:16px 0;border-top:1px solid var(--border-color);padding-top:12px;}
+.native-dialog summary {cursor:pointer;color:var(--accent);}
+.native-status {padding:12px;border-radius:8px;background:var(--accent-dim);overflow-wrap:anywhere;}
+.native-dialog .error {color:var(--danger);}
+.native-dialog small {display:block;color:var(--text-muted);margin-top:8px;}
+.native-dialog dt {font-weight:600;}
+.native-dialog dd {margin:0 0 8px;}
+.native-busy {opacity:.65;pointer-events:none;}
+#blazor-error-ui {display:none;position:fixed;bottom:0;left:0;right:0;padding:16px;background:#652b35;color:white;z-index:30000;}
+.boot-message {padding:32px;color:#eaeaea;font-family:system-ui;background:#1a1a2e;}

@@ -1,0 +1,16 @@
+using ChordLibrary.Core.Supabase;
+using ChordLibrary.Preview;
+using ChordLibrary.Shared;
+var builder = WebApplication.CreateBuilder(args);
+builder.WebHost.UseUrls("http://127.0.0.1:5288");
+builder.Services.AddRazorComponents().AddInteractiveServerComponents(options => options.DetailedErrors = builder.Environment.IsDevelopment()).AddHubOptions(options => options.MaximumReceiveMessageSize = 24 * 1024 * 1024);
+builder.Services.AddScoped<IAppPlatform,PreviewPlatform>();
+builder.Services.AddScoped<ISecretStore,PreviewSecretStore>();
+builder.Services.AddSingleton(AppDefaults.Load());
+builder.Services.AddScoped<AppSession>();
+builder.Services.AddSingleton(new HttpClient { Timeout = TimeSpan.FromSeconds(45) });
+var app = builder.Build();
+app.UseAntiforgery();
+app.UseStaticFiles();
+app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
+app.Run();

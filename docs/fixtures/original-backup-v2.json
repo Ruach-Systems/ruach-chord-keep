@@ -1,0 +1,36 @@
+{
+  "version": 2,
+  "exportedAt": "2023-11-14T22:13:22.000Z",
+  "songs": [
+    {
+      "id": "id-1700000000000-example",
+      "title": "EXAMPLE FIRST SONG",
+      "artist": "Example Artist",
+      "content": "KEY: C\n[VERSE]\nC  G/B  Am  F\nExample lyric line\n\n[CHORUS]\nF | G | C ||",
+      "transposeSteps": 2,
+      "twoColumn": true,
+      "createdAt": 1700000000000,
+      "updatedAt": 1700000001000
+    },
+    {
+      "id": "a7847086-8685-4bb2-83cb-af6fc8c5a5a3",
+      "title": "EXAMPLE SECOND SONG",
+      "artist": "",
+      "content": "KEY: D\nINTRO\nD | A/C# | Bm | G |",
+      "transposeSteps": -1,
+      "twoColumn": false,
+      "createdAt": 1700000000100,
+      "updatedAt": 1700000001100
+    }
+  ],
+  "setlists": [
+    {
+      "id": "id-1700000000200-practice",
+      "name": "Example practice set",
+      "description": "Invented fixture; no private user data.",
+      "songIds": ["a7847086-8685-4bb2-83cb-af6fc8c5a5a3", "id-1700000000000-example"],
+      "createdAt": 1700000000200,
+      "updatedAt": 1700000002000
+    }
+  ]
+}

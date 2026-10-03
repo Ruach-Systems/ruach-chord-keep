@@ -1,0 +1,243 @@
+@using System.Text.Json
+@using ChordLibrary.Core
+@using ChordLibrary.Core.Supabase
+@using Microsoft.JSInterop
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+@inject IAppPlatform Platform
+@inject AppSession Session
+
+<div id="library-root" inert="@(accountOpen || preview is not null || busy)">@((MarkupString)libraryHtml)</div>
+@if (!string.IsNullOrEmpty(startError))
+{
+    <div class="native-overlay"><section class="native-dialog" role="alert"><h2>Could not open your library</h2><p>@startError</p><p>Your saved files have been kept. Close and reopen the app after resolving the storage issue.</p></section></div>
+}
+@if (accountOpen)
+{
+    <div class="native-overlay"><section class="native-dialog @(busy ? "native-busy" : "")" role="dialog" aria-modal="true" aria-labelledby="account-title">
+        <h2 id="account-title">Account & sync</h2>
+        @if (Session.SignedIn)
+        {
+            <p>Signed in as <strong>@Session.Email</strong></p>
+            <p>Your account library is saved on this device and synchronized with Supabase.</p>
+            <div class="native-actions"><button class="btn btn-primary" @onclick="ManualSync">Sync now</button><button class="btn btn-secondary" @onclick="ImportGuest">Import local library</button><button class="btn btn-danger" @onclick="SignOut">Sign out</button></div>
+            <small>Sign out returns to the separate local library. Account data stays on this device for your next sign-in.</small>
+        }
+        else if (Session.Options is not null)
+        {
+            <p>Sign in to sync songs and setlists across your devices. Your local library stays separate until you choose to import it.</p>
+            @if (Session.HasAccountLibrary) { <p class="native-status">Your session expired. This device still has your account library. Sign in again to sync.</p><button class="btn btn-secondary" @onclick="SignOut">Return to local library</button> }
+            <label for="account-email">Email</label><input id="account-email" type="email" autocomplete="email" @bind="email"/>
+            @if (recoveryRequested)
+            {
+                <label for="recovery-code">Recovery link or code</label><input id="recovery-code" autocomplete="off" spellcheck="false" @bind="recoveryCode"/>
+                <small>Copy the Reset password link from your email without opening it, then paste it here. If your email shows a code, you can use that instead.</small>
+                <label for="new-password">New password</label><input id="new-password" type="password" autocomplete="new-password" @bind="newPassword"/>
+                <div class="native-actions"><button class="btn btn-primary" @onclick="ResetPassword">Reset password</button></div>
+            }
+            <label for="account-password">Password</label><input id="account-password" type="password" autocomplete="current-password" @bind="password"/>
+            <div class="native-actions"><button class="btn btn-primary" @onclick="SignIn">Sign in</button><button class="btn btn-secondary" @onclick="SignUp">Create account</button><button class="btn btn-secondary" @onclick="RequestRecovery">Forgot password</button></div>
+            <details open="@confirmationRequested"><summary>Confirm your email</summary>
+                <label for="confirmation-link">Confirmation link</label><input id="confirmation-link" autocomplete="off" spellcheck="false" @bind="confirmationLink"/>
+                <small>Copy the Confirm your email link from your signup email without opening it, then paste it here.</small>
+                <div class="native-actions"><button class="btn btn-secondary" @onclick="ConfirmEmail">Confirm and sign in</button></div>
+            </details>
+            @if (Platform.IsNative) { <div class="native-actions"><button class="btn btn-secondary" @onclick="GoogleSignIn">Continue with Google</button></div> }
+        }
+        else { <p>Your library works offline now. Connect your Supabase project below to enable account sign-in and sync.</p> }
+        @if (!string.IsNullOrEmpty(message)) { <p role="status" class="native-status">@message</p> }
+        @if (conflicts.Count > 0)
+        {
+            <h3>Changes need review</h3><p>Both versions are preserved. Choose which version to keep for each item.</p>
+            @foreach (var conflict in conflicts)
+            {
+                <details><summary>@RecordTitle(conflict.Local.Payload)</summary>
+                    <p>This device @(conflict.Local.Deleted ? "(deleted)" : "")</p><pre style="white-space:pre-wrap">@RecordText(conflict.Local.Payload)</pre>
+                    <p>Supabase @(conflict.Remote.Deleted ? "(deleted)" : "")</p><pre style="white-space:pre-wrap">@RecordText(conflict.Remote.Payload)</pre>
+                    <div class="native-actions"><button class="btn btn-secondary" @onclick="() => ResolveConflict(conflict, true)">Keep this device</button><button class="btn btn-secondary" @onclick="() => ResolveConflict(conflict, false)">Use Supabase</button></div>
+                </details>
+            }
+        }
+        @if (!Session.HasAccountLibrary)
+        {
+            <details open="@(Session.Options is null)"><summary>Supabase connection</summary>
+                <label for="project-url">Project URL</label><input id="project-url" type="url" placeholder="https://your-project.supabase.co" @bind="projectUrl"/>
+                <label for="publishable-key">Publishable key</label><input id="publishable-key" autocomplete="off" placeholder="sb_publishable_…" @bind="publishableKey"/>
+                <small>Use the public publishable key. Database setup instructions are included with this app.</small>
+                <div class="native-actions"><button class="btn btn-primary" @onclick="SaveConnection">Save connection</button></div>
+            </details>
+        }
+        @if (authWait is not null) { <button class="btn btn-secondary cancel-auth" style="pointer-events:auto" @onclick="() => authWait?.Cancel()">Cancel sign-in</button> }
+        <div class="native-actions"><button class="btn btn-secondary" @onclick="CloseAccount">Close</button></div>
+    </section></div>
+}
+@if (preview is not null)
+{
+    <div class="native-overlay"><section class="native-dialog @(busy ? "native-busy" : "")" role="dialog" aria-modal="true" aria-labelledby="import-title">
+        <h2 id="import-title">Import your library</h2>
+        <p>Import into <strong>@(Session.Email ?? "the local library")</strong>.</p>
+        <dl><dt>Songs</dt><dd>@preview.SongsAdded new · @preview.SongsUpdated updated</dd><dt>Setlists / playlists</dt><dd>@preview.SetlistsAdded new · @preview.SetlistsUpdated updated</dd></dl>
+        <p>Existing records are replaced only when the backup has a newer update time. Song IDs and setlist order are preserved.</p>
+        @foreach (var warning in preview.Warnings) { <p class="native-status">@warning</p> }
+        @if (!string.IsNullOrEmpty(importError)) { <p class="error" role="alert">@importError</p> }
+        <div class="native-actions"><button class="btn btn-secondary" @onclick="CancelImport">Cancel</button><button class="btn btn-primary" @onclick="CommitImport">Import</button></div>
+    </section></div>
+}
+@code {
+    private string libraryHtml = "", startError = "", message = "", importError = "";
+    private string email = "", password = "", projectUrl = "", publishableKey = "", pendingJson = "";
+    private bool accountOpen, busy, ready, recoveryRequested, confirmationRequested, cloudError;
+    private string recoveryCode = "", newPassword = "", confirmationLink = "";
+    private CancellationTokenSource? authWait;
+    private ImportPreview? preview;
+    private string? importProfile;
+    private LocalLibraryStore? importStore;
+    private List<LibrarySyncConflict> conflicts = [];
+    private DotNetObjectReference<LibraryShell>? reference;
+    private readonly CancellationTokenSource lifetime = new();
+    private Task? syncLoop;
+    private readonly SemaphoreSlim operations = new(1,1);
+    protected override void OnInitialized()
+    {
+        using var stream = typeof(LibraryShell).Assembly.GetManifestResourceStream("ChordLibrary.Shared.Assets.library.html")!;
+        using var reader = new StreamReader(stream); libraryHtml = reader.ReadToEnd();
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        try
+        {
+            reference = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("NativeBridge.configure", new { native = Platform.IsNative });
+            await JS.InvokeVoidAsync("NativeBridge.initialize", reference);
+            await JS.InvokeVoidAsync("libraryLoader.load");
+            ready = true;
+            await UpdateAccount();
+            syncLoop = RunSyncLoop();
+        }
+        catch (Exception ex) { startError = ex.Message; await InvokeAsync(StateHasChanged); }
+    }
+    [JSInvokable] public async Task<Dictionary<string,string>> Initialize() { await Session.InitializeAsync(); return await Session.ReadInitialAsync(); }
+    [JSInvokable] public Task SaveStorage(Dictionary<string,string> snapshot) => Session.SaveAsync(snapshot);
+    [JSInvokable] public Task ExportFile(string filename, string json) => Platform.ExportAsync(filename,json);
+    [JSInvokable] public Task<string?> PickSongFile() => Platform.PickJsonAsync();
+    [JSInvokable] public Task<string?> ScanQr() => Platform.ReadQrAsync(true);
+    [JSInvokable] public Task<string?> PickQrImage() => Platform.ReadQrAsync(false);
+    [JSInvokable] public async Task PickImport() { var json = await Platform.PickJsonAsync(); if (json is not null) await PreviewImport(json); }
+    [JSInvokable] public async Task PreviewImport(string json)
+    {
+        preview = await Session.Store.PreviewImportAsync(Session.ProfileId, json); pendingJson = json; importProfile = Session.ProfileId; importStore = Session.Store; importError = "";
+        await InvokeAsync(StateHasChanged);
+    }
+    [JSInvokable] public async Task OpenAccount()
+    {
+        accountOpen = true; projectUrl = Session.Options?.ProjectUrl ?? ""; publishableKey = Session.Options?.PublishableKey ?? "";
+        await InvokeAsync(StateHasChanged);
+    }
+    private void CloseAccount() { accountOpen = false; password = ""; newPassword = ""; recoveryCode = ""; confirmationLink = ""; }
+    private void CancelImport() { preview = null; pendingJson = ""; importError = ""; }
+    private async Task Run(Func<Task> action)
+    {
+        if (busy) return; busy = true; message = "";
+        await operations.WaitAsync();
+        try { await JS.InvokeVoidAsync("NativeBridge.flush"); await action(); }
+        catch (OperationCanceledException) { message = "Sign-in cancelled."; }
+        catch (Exception ex) { cloudError = true; message = ex.Message; await JS.InvokeVoidAsync("NativeBridge.showToast", message, "error"); }
+        finally { busy = false; operations.Release(); await UpdateAccount(); }
+    }
+    private async Task Refresh(bool reset = false)
+    {
+        await JS.InvokeVoidAsync("NativeBridge.flush");
+        await Session.DeliverSnapshotAsync(snapshot => JS.InvokeVoidAsync("NativeBridge.replaceSnapshot", snapshot, reset).AsTask());
+    }
+    private Task SaveConnection() => Run(async () => { await Session.ConfigureAsync(projectUrl,publishableKey); message = "Connection saved. Sign in after the Supabase schema is installed."; await Refresh(true); });
+    private Task SignIn() => Run(async () => {
+        if (!await JS.InvokeAsync<bool>("NativeBridge.canSwitchAccount")) return;
+        await Session.Auth!.SignInAsync(email,password); password = ""; Session.SelectAccount(); conflicts.Clear(); await Refresh(true);
+        message = "Signed in. Import your backup or choose Import local library to bring in your songs."; await SyncInternal();
+    });
+    private Task SignUp() => Run(async () => {
+        if (!await JS.InvokeAsync<bool>("NativeBridge.canSwitchAccount")) return;
+        var result = await Session.Auth!.SignUpAsync(email,password); password = "";
+        if (result.RequiresEmailConfirmation) { confirmationRequested = true; message = "Check your email. Copy its confirmation link and paste it below to confirm and sign in."; return; }
+        Session.SelectAccount(); conflicts.Clear(); await Refresh(true); await SyncInternal();
+    });
+    private Task GoogleSignIn() => Run(async () => {
+        if (!await JS.InvokeAsync<bool>("NativeBridge.canSwitchAccount")) return;
+        var uri = await Session.Auth!.BeginGoogleSignInAsync(new Uri(Platform.OAuthRedirectUri));
+        authWait = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token); await InvokeAsync(StateHasChanged);
+        try { var callback = await Platform.AuthenticateAsync(uri,authWait.Token); await Session.Auth.CompleteGoogleSignInAsync(callback); } finally { authWait.Dispose(); authWait = null; }
+        Session.SelectAccount(); conflicts.Clear(); await Refresh(true); await SyncInternal();
+    });
+    private Task ConfirmEmail() => Run(async () => {
+        if (!await JS.InvokeAsync<bool>("NativeBridge.canSwitchAccount")) return;
+        try { await Session.Auth!.VerifySignupLinkAsync(confirmationLink); }
+        finally { confirmationLink = ""; }
+        confirmationRequested = false; Session.SelectAccount(); conflicts.Clear(); await Refresh(true); await SyncInternal();
+    });
+    private Task RequestRecovery() => Run(async () => { await Session.Auth!.RequestPasswordResetAsync(email); recoveryRequested = true; message = "Check your email. Copy the recovery link without opening it, then paste it below with your new password."; });
+    private Task ResetPassword() => Run(async () => {
+        if (!await JS.InvokeAsync<bool>("NativeBridge.canSwitchAccount")) return;
+        if (recoveryCode.TrimStart().StartsWith("https://", StringComparison.OrdinalIgnoreCase)) await Session.Auth!.VerifyRecoveryLinkAsync(recoveryCode);
+        else await Session.Auth!.VerifyRecoveryCodeAsync(email,recoveryCode);
+        Session.SelectAccount(); conflicts.Clear(); await Refresh(true);
+        try { await Session.Auth.UpdatePasswordAsync(newPassword); message = "Password updated. You are signed in."; }
+        finally { newPassword = ""; recoveryCode = ""; recoveryRequested = false; }
+    });
+    private Task SignOut() => Run(async () => {
+        if (!await JS.InvokeAsync<bool>("NativeBridge.canSwitchAccount")) return;
+        var revoked = await Session.Auth!.SignOutAsync(); Session.SelectAccount(); conflicts.Clear(); await Refresh(true);
+        message = revoked ? "Signed out. Your local library is open." : "Signed out on this device. The server could not be reached to revoke the session.";
+    });
+    private Task ImportGuest() => Run(async () => {
+        var local = await Session.ReadGuestAsync();
+        await PreviewImport(new LibraryImportService().Export(local));
+    });
+    private async Task CommitImport()
+    {
+        if (busy) return; busy = true;
+        await operations.WaitAsync();
+        try {
+            await JS.InvokeVoidAsync("NativeBridge.flush");
+            if (importProfile != Session.ProfileId || !ReferenceEquals(importStore, Session.Store)) throw new InvalidOperationException("The account changed. Select the backup again for this account.");
+            await Session.Store.ImportAsync(Session.ProfileId,pendingJson); await Refresh(); CancelImport();
+            await JS.InvokeVoidAsync("NativeBridge.showToast", "Library imported and saved on this device.", "success");
+        } catch(Exception ex) { importError = ex.Message; } finally { busy = false; operations.Release(); }
+    }
+    private Task ManualSync() => Run(SyncInternal);
+    private async Task SyncInternal()
+    {
+        if (!Session.SignedIn) return;
+        await UpdateAccount("syncing");
+        var result = await Session.SyncAsync(lifetime.Token); cloudError = false; conflicts = result.Conflicts.ToList();
+        if (await JS.InvokeAsync<bool>("NativeBridge.canRefresh")) await Refresh();
+        message = conflicts.Count == 0 ? "Library is up to date." : $"{conflicts.Count} item(s) have changes on both devices. Review them below.";
+    }
+    private Task ResolveConflict(LibrarySyncConflict conflict, bool local) => Run(async () => {
+        if (local) await Session.Store.RebasePendingAsync(Session.ProfileId,conflict.Local.Collection,conflict.Local.Id,conflict.Remote.Revision, expectedLocalVersion: conflict.Local.LocalVersion);
+        else if (!await Session.Store.AcceptConflictRemoteAsync(Session.ProfileId,conflict.Local.Collection,conflict.Local.Id,conflict.Local.LocalVersion,conflict.Remote.Payload,conflict.Remote.Deleted,conflict.Remote.Revision)) throw new InvalidOperationException("This item changed again. Sync and review its latest versions.");
+        await SyncInternal();
+    });
+    private static string RecordTitle(System.Text.Json.Nodes.JsonObject record) => record["title"]?.ToString() ?? record["name"]?.ToString() ?? "Untitled";
+    private static string RecordText(System.Text.Json.Nodes.JsonObject record) => record["content"]?.ToString() ?? record["songIds"]?.ToJsonString() ?? "";
+    private Task UpdateAccount(string? status = null) => ready ? JS.InvokeVoidAsync("NativeBridge.setAccount", new { signedIn = Session.HasAccountLibrary, email = Session.Email, status = status ?? ((cloudError || (Session.HasAccountLibrary && !Session.SignedIn) || conflicts.Count > 0) ? "error" : Session.SignedIn ? "idle" : "offline"), message }).AsTask() : Task.CompletedTask;
+    private async Task RunSyncLoop()
+    {
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(25));
+        try {
+            while (await timer.WaitForNextTickAsync(lifetime.Token)) await InvokeAsync(async () => {
+                if (!Session.SignedIn || busy || preview is not null || !await JS.InvokeAsync<bool>("NativeBridge.canRefresh")) return;
+                if (!await operations.WaitAsync(0)) return;
+                try { await JS.InvokeVoidAsync("NativeBridge.flush"); await SyncInternal(); await UpdateAccount(); }
+                catch (Exception) { message = "Cloud sync is unavailable. Changes remain saved on this device and will retry automatically."; await UpdateAccount("error"); }
+                finally { operations.Release(); }
+            });
+        } catch (OperationCanceledException) { }
+    }
+    public async ValueTask DisposeAsync()
+    {
+        lifetime.Cancel();
+        if (syncLoop is not null) { try { await syncLoop; } catch (JSDisconnectedException) { } }
+        reference?.Dispose(); lifetime.Dispose();
+    }
+}

@@ -1,0 +1,12 @@
+**/bin/
+**/obj/
+.vs/
+.idea/
+*.user
+artifacts/
+.local/
+**/appsettings.local.json
+**/node_modules/
+TestResults/
+*.keystore
+*.jks

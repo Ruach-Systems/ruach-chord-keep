@@ -1,0 +1,981 @@
+
+  <div class="app">
+    <!-- Header -->
+    <header class="app-header">
+      <button class="btn-icon menu-toggle" id="menu-toggle" type="button" aria-label="Open library panel"
+        aria-controls="sidebar" aria-expanded="false" title="Open library panel">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M4 6h16M4 12h16M4 18h16"></path>
+        </svg>
+      </button>
+      <h1 class="app-title" id="app-title">Chord Library</h1>
+      <button class="btn-icon theme-toggle hidden" id="theme-toggle" aria-label="Toggle light/dark theme"
+        title="Toggle Theme">
+        <span id="theme-icon">🌙</span>
+      </button>
+      <div class="user-account">
+        <button class="user-btn" id="user-btn" title="Sign in to sync">
+          <img class="user-avatar hidden" id="user-avatar" alt="" referrerpolicy="no-referrer" />
+          <span class="user-icon" id="user-icon">👤</span>
+          <span class="sync-indicator-mini offline" id="sync-indicator" title="Not signed in"></span>
+        </button>
+        <div class="user-dropdown" id="user-dropdown">
+          <div class="user-dropdown-info">
+            <span class="user-dropdown-name" id="user-dropdown-name">Not signed in</span>
+            <span class="user-dropdown-email" id="user-dropdown-email"></span>
+          </div>
+          <button class="btn btn-secondary user-dropdown-btn" id="btn-preferences">
+            ⚙️ Preferences
+          </button>
+          <hr class="dropdown-divider" />
+          <button class="btn btn-secondary user-dropdown-btn" id="btn-export-data">
+            Export Data
+          </button>
+          <button class="btn btn-secondary user-dropdown-btn" id="btn-import-data">
+            Import Data
+          </button>
+          <input type="file" id="import-file-input" accept=".json" class="hidden" />
+          <hr class="dropdown-divider" />
+          <button class="btn btn-primary user-dropdown-btn" id="btn-sign-in">
+            Account & sync
+          </button>
+          <button class="btn btn-danger user-dropdown-btn hidden" id="btn-sign-out">
+            Sign out
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Floating Buttons -->
+    <button class="fab fab-autoscroll hidden" id="btn-autoscroll" aria-label="Auto-scroll"
+      title="Auto-scroll: tap to toggle, hold to change speed">
+      ▶
+    </button>
+    <button class="fab fab-sheet-top hidden" id="btn-sheet-scroll-top" type="button"
+      aria-label="Scroll chord sheet to top" title="Back to top">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M12 19V5"></path>
+        <path d="m6 11 6-6 6 6"></path>
+      </svg>
+    </button>
+    <button class="fab fab-home hidden" id="btn-home" aria-label="Go to Homepage" title="Home">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+      </svg>
+    </button>
+    <button class="fab" id="btn-add-song" aria-label="Add Song" title="Add Song">
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"
+        stroke-linecap="round" aria-hidden="true" focusable="false">
+        <path d="M12 5v14M5 12h14"></path>
+      </svg>
+    </button>
+
+    <!-- SW Update Banner -->
+    <div class="update-banner hidden" id="update-banner" role="alert">
+      <span>A new version is available</span>
+      <button class="btn btn-primary btn-sm" id="btn-update-refresh">
+        Refresh
+      </button>
+      <button class="btn-dismiss" id="btn-update-dismiss" aria-label="Dismiss">
+        &times;
+      </button>
+    </div>
+
+    <!-- Main Content -->
+    <main class="app-main">
+      <!-- Sidebar -->
+      <aside class="sidebar" id="sidebar">
+        <!-- Tabs for Songs/Setlists -->
+        <div class="sidebar-tabs" role="tablist" aria-label="Library collections">
+          <button class="tab-btn active" data-tab="songs" role="tab" aria-selected="true" aria-controls="songs-tab">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M9 18V5l11-2v13"></path>
+              <circle cx="6" cy="18" r="3"></circle>
+              <circle cx="17" cy="16" r="3"></circle>
+            </svg>
+            <span>Songs</span>
+            <span class="tab-count" id="songs-tab-count">0</span>
+          </button>
+          <button class="tab-btn" data-tab="setlists" role="tab" aria-selected="false" aria-controls="setlists-tab" tabindex="-1">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M4 6h10M4 12h10M4 18h7"></path>
+              <path d="M17 14v6M17 14l4-1v5"></path>
+              <circle cx="15.5" cy="20" r="1.5"></circle>
+              <circle cx="19.5" cy="18" r="1.5"></circle>
+            </svg>
+            <span>Setlists</span>
+            <span class="tab-count" id="setlists-tab-count">0</span>
+          </button>
+        </div>
+
+        <!-- Songs Tab -->
+        <div class="sidebar-content active" id="songs-tab" role="tabpanel">
+          <div class="sidebar-list-tools">
+            <div>
+              <strong>Song library</strong>
+              <span id="song-list-summary">0 songs</span>
+            </div>
+            <button class="sidebar-create-button" id="btn-add-song-sidebar" type="button" aria-label="Add a new song">
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M12 5v14M5 12h14"></path>
+              </svg>
+              <span>New</span>
+            </button>
+          </div>
+          <div class="sidebar-search">
+            <label class="sr-only" for="search-input">Search songs</label>
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <circle cx="11" cy="11" r="7"></circle>
+              <path d="m20 20-4-4"></path>
+            </svg>
+            <input type="text" id="search-input" placeholder="Search songs…" autocomplete="off" />
+          </div>
+          <div class="sidebar-sort">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M3 6h14M3 12h10M3 18h6"></path>
+            </svg>
+            <label class="sr-only" for="songs-sort">Sort songs</label>
+            <select id="songs-sort" class="sort-select" aria-label="Sort songs">
+              <option value="updated-desc" selected>Recently updated</option>
+              <option value="updated-asc">Least recently updated</option>
+              <option value="name-asc">Name: A–Z</option>
+              <option value="name-desc">Name: Z–A</option>
+            </select>
+          </div>
+          <ul class="song-list" id="song-list"></ul>
+        </div>
+
+        <!-- Setlists Tab -->
+        <div class="sidebar-content" id="setlists-tab" role="tabpanel">
+          <div class="sidebar-list-tools">
+            <div>
+              <strong>Setlist library</strong>
+              <span id="setlist-list-summary">0 setlists</span>
+            </div>
+            <button class="sidebar-create-button" id="btn-add-setlist" type="button" aria-label="Create a new setlist">
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M12 5v14M5 12h14"></path>
+              </svg>
+              <span>New</span>
+            </button>
+          </div>
+          <div class="sidebar-search">
+            <label class="sr-only" for="setlist-search-input">Search setlists</label>
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <circle cx="11" cy="11" r="7"></circle>
+              <path d="m20 20-4-4"></path>
+            </svg>
+            <input type="text" id="setlist-search-input" placeholder="Search setlists…" autocomplete="off" />
+          </div>
+          <div class="sidebar-sort">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M3 6h14M3 12h10M3 18h6"></path>
+            </svg>
+            <label class="sr-only" for="setlists-sort">Sort setlists</label>
+            <select id="setlists-sort" class="sort-select" aria-label="Sort setlists">
+              <option value="updated-desc" selected>Recently updated</option>
+              <option value="updated-asc">Least recently updated</option>
+              <option value="name-asc">Name: A–Z</option>
+              <option value="name-desc">Name: Z–A</option>
+            </select>
+          </div>
+          <ul class="setlist-list" id="setlist-list"></ul>
+        </div>
+      </aside>
+
+      <!-- Content Area -->
+      <section class="content" id="content">
+        <!-- Empty State / Home Dashboard -->
+        <div class="empty-state" id="empty-state">
+          <div class="home-dashboard hidden" id="home-dashboard">
+            <div class="home-dashboard-hero">
+              <span class="home-dashboard-hero-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false">
+                  <path d="M3 12a9 9 0 1 0 3-6.7L3 8"></path>
+                  <path d="M3 3v5h5M12 7v5l3 2"></path>
+                </svg>
+              </span>
+              <div>
+                <h2>Jump back in</h2>
+                <p>Your latest songs and setlists are ready to open.</p>
+              </div>
+            </div>
+
+            <div class="home-dashboard-grid">
+              <section class="home-section" id="home-recent-songs" aria-labelledby="home-songs-title">
+                <div class="home-section-header">
+                  <div class="home-section-heading">
+                    <span class="home-section-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" focusable="false">
+                        <path d="M9 18V5l11-2v13"></path>
+                        <circle cx="6" cy="18" r="3"></circle>
+                        <circle cx="17" cy="16" r="3"></circle>
+                      </svg>
+                    </span>
+                    <div>
+                      <h3 class="home-section-title" id="home-songs-title">Recent songs</h3>
+                      <p class="home-section-description">Continue with your latest edits</p>
+                    </div>
+                  </div>
+                  <button class="home-view-all" type="button" data-home-tab="songs" aria-label="View all songs">
+                    View all
+                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="m9 18 6-6-6-6"></path>
+                    </svg>
+                  </button>
+                </div>
+                <ul class="home-section-list" id="home-songs-list"></ul>
+              </section>
+
+              <section class="home-section" id="home-recent-setlists" aria-labelledby="home-setlists-title">
+                <div class="home-section-header">
+                  <div class="home-section-heading">
+                    <span class="home-section-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" focusable="false">
+                        <path d="M4 6h10M4 12h10M4 18h7"></path>
+                        <path d="M17 14v6M17 14l4-1v5"></path>
+                        <circle cx="15.5" cy="20" r="1.5"></circle>
+                        <circle cx="19.5" cy="18" r="1.5"></circle>
+                      </svg>
+                    </span>
+                    <div>
+                      <h3 class="home-section-title" id="home-setlists-title">Recent setlists</h3>
+                      <p class="home-section-description">Return to your latest setlists</p>
+                    </div>
+                  </div>
+                  <button class="home-view-all" type="button" data-home-tab="setlists" aria-label="View all setlists">
+                    View all
+                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="m9 18 6-6-6-6"></path>
+                    </svg>
+                  </button>
+                </div>
+                <ul class="home-section-list" id="home-setlists-list"></ul>
+              </section>
+            </div>
+          </div>
+          <div class="empty-state-fallback" id="empty-state-fallback">
+            <div class="empty-icon">🎸</div>
+            <p>Select a song or add a new one</p>
+          </div>
+        </div>
+
+        <!-- Song Detail View -->
+        <div class="song-detail hidden" id="song-detail">
+          <!-- Back to setlist + navigation hint -->
+          <div class="song-detail-top">
+            <button class="btn-back-setlist hidden" id="btn-back-setlist" aria-label="Back to setlist"
+              title="Back to setlist">
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="m15 18-6-6 6-6"></path>
+              </svg>
+              <span id="btn-back-setlist-label">Setlist</span>
+            </button>
+            <div class="song-nav-hint hidden" id="song-nav-hint">
+              <span class="nav-hint-text">Swipe left/right • <span id="nav-hint-info"></span></span>
+            </div>
+          </div>
+
+          <!-- Toolbar: Transpose, layout, and font size -->
+          <div class="song-toolbar" role="group" aria-label="Song display controls">
+            <div class="song-toolbar-left song-control-group">
+              <span class="song-control-label">Transpose</span>
+              <div class="song-control-row">
+                <button class="btn-tool btn-transpose-step" id="btn-transpose-down" aria-label="Transpose down 1 semitone"
+                  title="Down 1 semitone">
+                  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path d="M5 12h14"></path>
+                  </svg>
+                </button>
+                <span class="transpose-value" id="transpose-value" aria-live="polite">0</span>
+                <button class="btn-tool btn-transpose-step" id="btn-transpose-up" aria-label="Transpose up 1 semitone" title="Up 1 semitone">
+                  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path d="M12 5v14M5 12h14"></path>
+                  </svg>
+                </button>
+                <button class="btn-tool btn-transpose-reset" id="btn-transpose-reset" aria-label="Reset to original key"
+                  title="Reset to original key">
+                  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path d="M3 12a9 9 0 1 0 3-6.7L3 8"></path>
+                    <path d="M3 3v5h5"></path>
+                  </svg>
+                </button>
+                <button class="btn-tool btn-transpose-accept hidden" id="btn-transpose-accept"
+                  aria-label="Set transposed chords as the new base" title="Set current key as new base">
+                  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path d="m5 12 4 4L19 6"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div class="song-toolbar-right">
+              <div class="song-control-group song-layout-control">
+                <span class="song-control-label">Layout</span>
+                <label class="column-toggle" title="Display this song in two columns">
+                  <span class="column-toggle-label">2 Col</span>
+                  <input type="checkbox" id="two-column-toggle" aria-label="Display this song in two columns" />
+                  <span class="column-toggle-track" aria-hidden="true"></span>
+                </label>
+              </div>
+              <div class="song-control-group song-text-control">
+                <label class="song-control-label" for="font-size-select">Text size</label>
+                <div class="font-size-control">
+                  <select class="font-size-select" id="font-size-select" title="Font Size" aria-label="Song font size">
+                    <option value="10">10</option>
+                    <option value="12">12</option>
+                    <option value="14" selected>14</option>
+                    <option value="16">16</option>
+                    <option value="18">18</option>
+                    <option value="20">20</option>
+                    <option value="22">22</option>
+                    <option value="24">24</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div class="song-actions-control">
+              <span class="song-control-label">More</span>
+              <button class="btn-tool btn-song-actions" id="btn-song-actions" aria-label="Open song actions"
+                aria-haspopup="menu" aria-controls="song-actions-menu" aria-expanded="false" title="Song Actions">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <circle cx="5" cy="12" r="1.5"></circle>
+                  <circle cx="12" cy="12" r="1.5"></circle>
+                  <circle cx="19" cy="12" r="1.5"></circle>
+                </svg>
+              </button>
+              <div class="song-actions-menu hidden" id="song-actions-menu" role="menu" aria-label="Song actions">
+                  <button class="song-action-menu-item" id="btn-edit-song" role="menuitem">
+                    <span class="song-action-menu-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" focusable="false">
+                        <path d="M12 20h9"></path>
+                        <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path>
+                      </svg>
+                    </span>
+                    <span>Edit song info</span>
+                  </button>
+                  <button class="song-action-menu-item" id="btn-share-song" role="menuitem">
+                    <span class="song-action-menu-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" focusable="false">
+                        <rect x="3" y="3" width="6" height="6"></rect>
+                        <rect x="15" y="3" width="6" height="6"></rect>
+                        <rect x="3" y="15" width="6" height="6"></rect>
+                        <path d="M15 15h2v2h-2zM19 15h2v6h-6v-2M15 19h2"></path>
+                      </svg>
+                    </span>
+                    <span>Share via QR</span>
+                  </button>
+                  <button class="song-action-menu-item" id="btn-export-song" role="menuitem">
+                    <span class="song-action-menu-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" focusable="false">
+                        <path d="M12 3v12"></path>
+                        <path d="m7 10 5 5 5-5"></path>
+                        <path d="M5 21h14"></path>
+                      </svg>
+                    </span>
+                    <span>Export song</span>
+                  </button>
+                  <div class="song-action-menu-divider" role="separator"></div>
+                  <button class="song-action-menu-item song-action-menu-danger" id="btn-delete-song" role="menuitem">
+                    <span class="song-action-menu-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" focusable="false">
+                        <path d="M3 6h18"></path>
+                        <path d="M8 6V4h8v2"></path>
+                        <path d="m19 6-1 15H6L5 6"></path>
+                        <path d="M10 11v5M14 11v5"></path>
+                      </svg>
+                    </span>
+                    <span>Delete song</span>
+                  </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="song-content-meta">
+            <div class="song-content-heading">
+              <span class="song-viewer-eyebrow">Chord sheet</span>
+              <div class="song-key-info hidden" id="song-key-info">
+                <span class="key-badge" id="key-badge"></span>
+              </div>
+            </div>
+            <div class="char-buttons inline-char-buttons hidden" id="contenteditable-char-buttons"
+              aria-label="Insert chord character">
+              <button type="button" class="char-btn" data-inline-char="b" aria-label="Insert b">b</button>
+              <button type="button" class="char-btn" data-inline-char="#" aria-label="Insert #">#</button>
+              <button type="button" class="char-btn" data-inline-char="/" aria-label="Insert /">/</button>
+              <button type="button" class="char-btn" data-inline-char="|" aria-label="Insert |">|</button>
+              <button type="button" class="char-btn" data-inline-char="-" aria-label="Insert -">-</button>
+              <button type="button" class="char-btn" data-inline-pair="[]"
+                aria-label="Insert square brackets and place caret inside" title="Insert []">[]</button>
+              <button type="button" class="char-btn" data-inline-pair="()"
+                aria-label="Insert parentheses and place caret inside" title="Insert ()">()</button>
+            </div>
+            <button class="btn-inline-edit" id="btn-inline-edit" type="button"
+              aria-label="Inline edit chords" title="Inline edit chords">
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M12 20h9"></path>
+                <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path>
+              </svg>
+            </button>
+          </div>
+
+          <!-- Song Content -->
+          <section class="song-content-section" id="song-content-section" aria-label="Song lyrics and chords">
+            <div class="contenteditable-actions hidden" id="contenteditable-actions" aria-label="Inline edit actions">
+              <button class="btn-content-edit btn-content-edit-cancel" id="btn-cancel-content-edit" type="button"
+                aria-label="Cancel inline editing" title="Cancel editing">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <path d="M18 6 6 18M6 6l12 12"></path>
+                </svg>
+              </button>
+              <button class="btn-content-edit btn-content-edit-save" id="btn-save-content-edit" type="button"
+                aria-label="Save inline changes" title="Save changes">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <path d="m5 12 4 4L19 6"></path>
+                </svg>
+              </button>
+            </div>
+            <pre class="contenteditable-highlight hidden" id="contenteditable-highlight" aria-hidden="true"></pre>
+            <pre class="song-content" id="song-content"></pre>
+            <div class="inline-song-editor hidden" id="inline-song-editor">
+              <div class="inline-editor-header">
+                <div>
+                  <strong>Editing chords</strong>
+                  <span class="inline-editor-note hidden" id="inline-editor-note">Editing the original, untransposed chords</span>
+                </div>
+                <span class="inline-editor-shortcut" aria-hidden="true">Ctrl/⌘ + S to save</span>
+              </div>
+              <div class="char-buttons inline-char-buttons legacy-inline-char-buttons"
+                aria-label="Insert chord character">
+                <button type="button" class="char-btn" data-legacy-inline-char="b" aria-label="Insert b">b</button>
+                <button type="button" class="char-btn" data-legacy-inline-char="#" aria-label="Insert #">#</button>
+                <button type="button" class="char-btn" data-legacy-inline-char="/" aria-label="Insert /">/</button>
+                <button type="button" class="char-btn" data-legacy-inline-char="|" aria-label="Insert |">|</button>
+                <button type="button" class="char-btn" data-legacy-inline-char="-" aria-label="Insert -">-</button>
+                <button type="button" class="char-btn" data-legacy-inline-pair="[]"
+                  aria-label="Insert square brackets and place caret inside" title="Insert []">[]</button>
+                <button type="button" class="char-btn" data-legacy-inline-pair="()"
+                  aria-label="Insert parentheses and place caret inside" title="Insert ()">()</button>
+              </div>
+              <div class="inline-song-edit-surface">
+                <pre class="inline-song-highlight" id="inline-song-highlight" aria-hidden="true"></pre>
+                <textarea class="inline-song-content" id="inline-song-content" aria-label="Lyrics and chords"
+                  spellcheck="false"></textarea>
+              </div>
+              <div class="inline-editor-actions">
+                <button class="btn btn-secondary inline-editor-action" id="btn-cancel-inline-edit" type="button">
+                  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path d="M18 6 6 18M6 6l12 12"></path>
+                  </svg>
+                  <span>Cancel</span>
+                </button>
+                <button class="btn btn-primary inline-editor-action" id="btn-save-inline-edit" type="button">
+                  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path d="m5 12 4 4L19 6"></path>
+                  </svg>
+                  <span>Save changes</span>
+                </button>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- Setlist Detail View -->
+        <div class="setlist-detail hidden" id="setlist-detail">
+          <section class="setlist-overview" aria-labelledby="setlist-title">
+            <div class="setlist-overview-top">
+              <span class="setlist-overview-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false">
+                  <path d="M4 6h10M4 12h10M4 18h7"></path>
+                  <path d="M17 14v6M17 14l4-1v5"></path>
+                  <circle cx="15.5" cy="20" r="1.5"></circle>
+                  <circle cx="19.5" cy="18" r="1.5"></circle>
+                </svg>
+              </span>
+              <div class="setlist-overview-heading">
+                <span class="setlist-eyebrow">Setlist</span>
+                <h2 class="setlist-title" id="setlist-title"></h2>
+              </div>
+            </div>
+            <div class="setlist-actions">
+              <button class="setlist-action-button" id="btn-edit-setlist" type="button" aria-label="Edit setlist" title="Edit setlist">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <path d="M12 20h9"></path>
+                  <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path>
+                </svg>
+              </button>
+              <button class="setlist-action-button setlist-action-danger" id="btn-delete-setlist" type="button" aria-label="Delete setlist" title="Delete setlist">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"></path>
+                  <path d="M10 11v5M14 11v5"></path>
+                </svg>
+              </button>
+            </div>
+            <p class="setlist-description" id="setlist-description"></p>
+            <div class="setlist-meta" aria-label="Setlist summary">
+              <span id="setlist-song-count">0 songs</span>
+              <span aria-hidden="true">•</span>
+              <span id="setlist-updated">Updated recently</span>
+            </div>
+          </section>
+
+          <section class="setlist-song-section" aria-labelledby="setlist-songs-title">
+            <div class="setlist-song-section-header">
+              <div>
+                <h3 id="setlist-songs-title">Songs</h3>
+                <p id="setlist-reorder-hint">Drag the handle to reorder your set.</p>
+              </div>
+              <button class="btn-add-songs" id="btn-add-songs-to-setlist" type="button">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <path d="M12 5v14M5 12h14"></path>
+                </svg>
+                <span>Add songs</span>
+              </button>
+            </div>
+            <ul class="setlist-songs" id="setlist-songs"></ul>
+          </section>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Song Modal -->
+  <div class="modal hidden" id="song-modal" role="dialog" aria-modal="true" aria-labelledby="song-modal-title">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content modal-song">
+      <div class="song-modal-header">
+        <span class="song-modal-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" focusable="false">
+            <path d="M9 18V5l11-2v13"></path>
+            <circle cx="6" cy="18" r="3"></circle>
+            <circle cx="17" cy="16" r="3"></circle>
+          </svg>
+        </span>
+        <div>
+          <h3 class="modal-title" id="song-modal-title">Add a song</h3>
+          <p class="song-modal-subtitle" id="song-modal-subtitle">Create a clear, searchable chord sheet.</p>
+        </div>
+        <button type="button" class="song-modal-close" id="btn-close-song-modal" aria-label="Close song form" title="Close">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M18 6 6 18M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+
+      <section class="song-import-panel" id="song-import-panel" aria-labelledby="song-import-title">
+        <div class="song-import-copy">
+          <span class="song-import-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false">
+              <path d="M12 3v12"></path>
+              <path d="m7 10 5 5 5-5"></path>
+              <path d="M5 21h14"></path>
+            </svg>
+          </span>
+          <div>
+            <strong id="song-import-title">Import instead</strong>
+            <span>Load a saved song file or scan one from another device.</span>
+          </div>
+        </div>
+        <div class="import-song-row">
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-import-song">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M12 3v12"></path>
+              <path d="m7 10 5 5 5-5"></path>
+              <path d="M5 21h14"></path>
+            </svg>
+            <span>Song file</span>
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-scan-qr">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M7 3H3v4M17 3h4v4M7 21H3v-4M17 21h4v-4"></path>
+              <rect x="7" y="7" width="3" height="3"></rect>
+              <rect x="14" y="7" width="3" height="3"></rect>
+              <rect x="7" y="14" width="3" height="3"></rect>
+              <path d="M14 14h2v2h-2zM18 14h2v6h-6v-2M14 18h2"></path>
+            </svg>
+            <span>QR code</span>
+          </button>
+        </div>
+        <input type="file" id="import-song-file" accept=".json" class="hidden" />
+        <input type="file" id="scan-qr-image-file" accept="image/*" class="hidden" />
+      </section>
+
+      <form id="song-form">
+        <div class="song-info-fields">
+          <div class="form-group">
+            <label for="song-title-input">Song title <span aria-hidden="true">*</span></label>
+            <input type="text" id="song-title-input" autocomplete="off" placeholder="YAWEH" required />
+          </div>
+          <div class="form-group">
+            <label for="song-artist-input">Artist <span class="field-optional">Optional</span></label>
+            <input type="text" id="song-artist-input" autocomplete="off" placeholder="Harana Band" />
+          </div>
+        </div>
+
+        <div class="form-group form-group-chords" id="song-content-field">
+          <div class="label-with-buttons">
+            <div>
+              <label for="song-content-input">Chord sheet <span aria-hidden="true">*</span></label>
+            </div>
+            <div class="char-buttons" aria-label="Insert chord character">
+              <button type="button" class="char-btn" data-char="b" aria-label="Insert flat b" title="Insert flat b">b</button>
+              <button type="button" class="char-btn" data-char="#" aria-label="Insert sharp #" title="Insert sharp #">#</button>
+              <button type="button" class="char-btn" data-char="/" aria-label="Insert slash" title="Insert slash">/</button>
+              <button type="button" class="char-btn" data-char="|" aria-label="Insert bar" title="Insert bar">|</button>
+              <button type="button" class="char-btn" data-char="-" aria-label="Insert dash" title="Insert dash">-</button>
+              <button type="button" class="char-btn" data-pair="[]"
+                aria-label="Insert square brackets and place caret inside" title="Insert []">[]</button>
+              <button type="button" class="char-btn" data-pair="()"
+                aria-label="Insert parentheses and place caret inside" title="Insert ()">()</button>
+            </div>
+          </div>
+          <textarea id="song-content-input" rows="16" required
+            placeholder="[INTRO]&#10;Em-Bm-C-G-&#10;Em-Bm-C|(Am-Bm-C)-(Bm-C-D)&#10;&#10;VERSE&#10;..."></textarea>
+        </div>
+
+        <div class="edit-song-info-note hidden" id="edit-song-info-note">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <circle cx="12" cy="12" r="9"></circle>
+            <path d="M12 11v5M12 8h.01"></path>
+          </svg>
+          <p>To change the chord sheet, close this window and use the pencil beside <strong>Chord sheet</strong>.</p>
+        </div>
+
+        <div class="modal-actions song-modal-actions">
+          <button type="button" class="btn btn-secondary" id="btn-cancel-song">
+            Cancel
+          </button>
+          <button type="submit" class="btn btn-primary" id="btn-save-song">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="m5 12 4 4L19 6"></path>
+            </svg>
+            <span id="btn-save-song-label">Add song</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Setlist Modal -->
+  <div class="modal hidden" id="setlist-modal" role="dialog" aria-modal="true" aria-labelledby="setlist-modal-title">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content modal-panel setlist-modal-content">
+      <div class="modal-panel-header">
+        <span class="modal-panel-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" focusable="false">
+            <path d="M4 6h10M4 12h10M4 18h7"></path>
+            <path d="M17 14v6M17 14l4-1v5"></path>
+            <circle cx="15.5" cy="20" r="1.5"></circle>
+            <circle cx="19.5" cy="18" r="1.5"></circle>
+          </svg>
+        </span>
+        <div class="modal-panel-heading">
+          <h3 class="modal-title" id="setlist-modal-title">Create setlist</h3>
+          <p class="modal-panel-subtitle" id="setlist-modal-subtitle">Build a setlist for services, rehearsals, or events.</p>
+        </div>
+        <button class="modal-panel-close" id="btn-close-setlist" type="button" aria-label="Close setlist editor">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="m6 6 12 12M18 6 6 18"></path>
+          </svg>
+        </button>
+      </div>
+      <form class="modal-panel-form" id="setlist-form">
+        <div class="modal-panel-body">
+          <div class="form-group">
+            <label for="setlist-name-input">Setlist name <span aria-hidden="true">*</span></label>
+            <input type="text" id="setlist-name-input" placeholder="Sunday Worship" autocomplete="off" required />
+            <p class="field-help">Use a short name that is easy to find in the library.</p>
+          </div>
+          <div class="form-group">
+            <label for="setlist-description-input">Description <span class="field-optional">Optional</span></label>
+            <textarea id="setlist-description-input" rows="4"
+              placeholder="Add the service, team, or occasion for this setlist."></textarea>
+          </div>
+        </div>
+        <div class="modal-actions modal-panel-actions">
+          <button type="button" class="btn btn-secondary" id="btn-cancel-setlist">
+            Cancel
+          </button>
+          <button type="submit" class="btn btn-primary">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="m5 12 4 4L19 6"></path>
+            </svg>
+            <span id="btn-save-setlist-label">Create setlist</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add Songs to Setlist Modal -->
+  <div class="modal hidden" id="add-songs-modal" role="dialog" aria-modal="true" aria-label="Add Songs to Setlist">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+      <h3 class="modal-title">Add Songs to Setlist</h3>
+      <div class="song-selector" id="song-selector"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" id="btn-cancel-add-songs">
+          Cancel
+        </button>
+        <button type="button" class="btn btn-primary" id="btn-confirm-add-songs">
+          Add Selected
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirm Delete Modal -->
+  <div class="modal hidden" id="confirm-modal" role="alertdialog" aria-modal="true" aria-labelledby="confirm-message">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content modal-confirm">
+      <h3 class="modal-title">Confirm Delete</h3>
+      <p id="confirm-message">Are you sure you want to delete this item?</p>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" id="btn-cancel-confirm">
+          Cancel
+        </button>
+        <button type="button" class="btn btn-danger" id="btn-confirm-delete">
+          Delete
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- QR Scanner Modal -->
+  <div class="qr-scanner-overlay hidden" id="qr-scanner-overlay" role="dialog" aria-modal="true"
+    aria-labelledby="qr-scanner-title" aria-describedby="qr-scanner-subtitle">
+    <div class="qr-scanner-header">
+      <span class="qr-scanner-header-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" focusable="false">
+          <path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4z"></path>
+          <path d="M14 14h2v2h-2zM18 14h2v6h-2zM14 18h2v2h-2z"></path>
+        </svg>
+      </span>
+      <div class="qr-scanner-heading">
+        <h3 class="qr-scanner-title" id="qr-scanner-title">Scan song QR</h3>
+        <p id="qr-scanner-subtitle">Import a chord sheet from another device.</p>
+      </div>
+      <button class="qr-scanner-close" id="btn-close-scanner" type="button" aria-label="Close QR scanner">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="m6 6 12 12M18 6 6 18"></path>
+        </svg>
+      </button>
+    </div>
+    <div class="qr-scanner-body">
+      <div class="qr-scanner-status" role="status">
+        <span class="qr-scanner-status-dot" aria-hidden="true"></span>
+        <span id="qr-scanner-status-text">Camera ready</span>
+      </div>
+      <div class="qr-scanner-viewfinder">
+        <video id="scan-qr-video" playsinline muted></video>
+        <div class="qr-viewfinder-frame">
+          <span class="vf-corner vf-tl"></span>
+          <span class="vf-corner vf-tr"></span>
+          <span class="vf-corner vf-bl"></span>
+          <span class="vf-corner vf-br"></span>
+          <div class="qr-scan-line"></div>
+        </div>
+      </div>
+      <div class="qr-scanner-hint">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M12 3v3M12 18v3M3 12h3M18 12h3"></path>
+          <circle cx="12" cy="12" r="4"></circle>
+        </svg>
+        <span>Center the entire QR code and hold your device steady.</span>
+      </div>
+      <div class="qr-scanner-actions">
+        <button type="button" class="btn btn-secondary" id="btn-scan-qr-image">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <rect x="3" y="4" width="18" height="16" rx="2"></rect>
+            <circle cx="8.5" cy="9" r="1.5"></circle>
+            <path d="m21 15-5-5L5 20"></path>
+          </svg>
+          Choose image
+        </button>
+        <button type="button" class="btn btn-danger" id="btn-stop-scan-qr">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="m6 6 12 12M18 6 6 18"></path>
+          </svg>
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Share Song QR Modal -->
+  <div class="modal hidden" id="share-qr-modal" role="dialog" aria-modal="true" aria-labelledby="share-qr-title">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content modal-panel share-qr-content">
+      <div class="modal-panel-header">
+        <span class="modal-panel-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" focusable="false">
+            <path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4z"></path>
+            <path d="M14 14h2v2h-2zM18 14h2v6h-2zM14 18h2v2h-2z"></path>
+          </svg>
+        </span>
+        <div class="modal-panel-heading">
+          <h3 class="modal-title" id="share-qr-title">Share song via QR</h3>
+          <p class="modal-panel-subtitle" id="share-qr-song-name">Ready for another device to scan.</p>
+        </div>
+        <button class="modal-panel-close" id="btn-close-share-qr-x" type="button" aria-label="Close generated QR code">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="m6 6 12 12M18 6 6 18"></path>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-panel-body share-qr-body">
+        <div class="share-qr-canvas-wrap">
+          <canvas id="share-qr-canvas" width="260" height="260" role="img" aria-label="Generated song QR code"></canvas>
+        </div>
+        <div class="share-qr-help" id="share-qr-help">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <circle cx="12" cy="12" r="9"></circle>
+            <path d="M12 11v5M12 8h.01"></path>
+          </svg>
+          <span>On the other device, open Add Song and choose QR code.</span>
+        </div>
+      </div>
+      <div class="modal-actions modal-panel-actions">
+        <button type="button" class="btn btn-primary" id="btn-close-share-qr">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="m5 12 4 4L19 6"></path>
+          </svg>
+          Done
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Preferences Modal -->
+  <div class="modal hidden" id="preferences-modal" role="dialog" aria-modal="true"
+    aria-labelledby="preferences-modal-title">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content modal-panel preferences-modal-content">
+      <div class="modal-panel-header">
+        <span class="modal-panel-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" focusable="false">
+            <path d="M4 7h10M18 7h2M4 17h2M10 17h10"></path>
+            <circle cx="16" cy="7" r="2"></circle>
+            <circle cx="8" cy="17" r="2"></circle>
+          </svg>
+        </span>
+        <div class="modal-panel-heading">
+          <h3 class="modal-title" id="preferences-modal-title">Preferences</h3>
+          <p class="modal-panel-subtitle">Choose how Chord Library looks and displays chords.</p>
+        </div>
+        <button class="modal-panel-close" id="btn-close-preferences-x" type="button" aria-label="Close preferences">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="m6 6 12 12M18 6 6 18"></path>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-panel-body preferences-body">
+        <section class="pref-group" aria-labelledby="pref-theme-label">
+          <div class="pref-group-heading">
+            <span class="pref-label" id="pref-theme-label">Theme</span>
+            <span>Set the app’s overall appearance.</span>
+          </div>
+          <div class="pref-options" role="group" aria-labelledby="pref-theme-label">
+            <button class="pref-option" id="pref-theme-dark" type="button" data-value="dark">
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M20 15.5A8 8 0 0 1 8.5 4 8.5 8.5 0 1 0 20 15.5Z"></path>
+              </svg>
+              <span>Dark</span>
+            </button>
+            <button class="pref-option" id="pref-theme-light" type="button" data-value="light">
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <circle cx="12" cy="12" r="4"></circle>
+                <path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"></path>
+              </svg>
+              <span>Light</span>
+            </button>
+          </div>
+        </section>
+        <section class="pref-group" aria-labelledby="pref-notation-label">
+          <div class="pref-group-heading">
+            <span class="pref-label" id="pref-notation-label">Chord notation</span>
+            <span>Choose how accidentals appear in the song viewer.</span>
+          </div>
+          <div class="pref-options pref-notation-options" role="group" aria-labelledby="pref-notation-label">
+            <button class="pref-option" id="pref-notation-original" type="button" data-value="original">
+              <strong>As entered</strong>
+              <span>Keep original</span>
+            </button>
+            <button class="pref-option" id="pref-notation-sharp" type="button" data-value="sharp">
+              <strong>C#</strong>
+              <span>Prefer sharps</span>
+            </button>
+            <button class="pref-option" id="pref-notation-flat" type="button" data-value="flat">
+              <strong>Db</strong>
+              <span>Prefer flats</span>
+            </button>
+          </div>
+        </section>
+      </div>
+      <div class="modal-actions modal-panel-actions">
+        <button type="button" class="btn btn-primary" id="btn-close-preferences">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="m5 12 4 4L19 6"></path>
+          </svg>
+          Done
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notifications -->
+  <div class="toast-container" id="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- Undo Toast (separate for undo actions) -->
+  <div class="undo-toast hidden" id="undo-toast" role="alert">
+    <span id="undo-toast-message">Item deleted</span>
+    <button class="btn-undo" id="btn-undo">Undo</button>
+  </div>
+
+  <!-- Screen reader announcements -->
+  <div class="sr-only" aria-live="assertive" id="sr-announcements"></div>
+
+  <!-- Feature Tour Overlay -->
+  <div class="tour-overlay hidden" id="tour-overlay">
+    <div class="tour-modal">
+      <h2 class="tour-title">🎉 What's New</h2>
+      <div class="tour-slides" id="tour-slides">
+        <div class="tour-slide" data-slide="0" data-feature="two-column" data-introduced="2.1">
+          <div class="tour-slide-icon">📖</div>
+          <h3>Two-Column Song View</h3>
+          <p>Use the 2 Col switch in the song toolbar to fit long chord sheets into two columns. Your choice is saved per song.</p>
+        </div>
+        <div class="tour-slide" data-slide="1" data-feature="accept-transposition" data-introduced="2.3">
+          <div class="tour-slide-icon">✓</div>
+          <h3>Keep a Transposed Key</h3>
+          <p>After transposing a song, use the check button beside reset to save those chords as the new base key.</p>
+        </div>
+        <div class="tour-slide" data-slide="2" data-feature="preferences" data-introduced="2.0">
+          <div class="tour-slide-icon">⚙️</div>
+          <h3>Preferences</h3>
+          <p>Tap your profile icon to access Preferences — choose theme (dark/light) and chord notation (sharp # or flat b).</p>
+        </div>
+        <div class="tour-slide" data-slide="3" data-feature="setlist-reorder" data-introduced="2.0">
+          <div class="tour-slide-icon">↕️</div>
+          <h3>Setlist Reorder</h3>
+          <p>Drag the ⋮⋮ handle on setlist songs to reorder them. Long-press the handle on mobile.</p>
+        </div>
+        <div class="tour-slide" data-slide="4" data-feature="inline-edit-tools" data-introduced="2.4">
+          <div class="tour-slide-icon">✏️</div>
+          <h3>Faster Inline Chord Editing</h3>
+          <p>Edit from the top of the chord sheet and use the b, #, /, |, and - buttons to enter chord symbols quickly.</p>
+        </div>
+        <div class="tour-slide" data-slide="5" data-feature="library-refresh" data-introduced="2.2">
+          <div class="tour-slide-icon">✨</div>
+          <h3>Faster Library Navigation</h3>
+          <p>Jump back into recent songs and setlists, search either collection, and manage clearer setlists from the refreshed dashboard and drawer.</p>
+        </div>
+      </div>
+      <div class="tour-dots" id="tour-dots"></div>
+      <div class="tour-actions">
+        <button class="btn btn-secondary" id="tour-skip">Skip</button>
+        <button class="btn btn-primary" id="tour-next">Next</button>
+      </div>
+    </div>
+  </div>
