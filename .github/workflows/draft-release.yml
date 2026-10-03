@@ -1,0 +1,113 @@
+name: Create draft from verified build
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+      build_run_id:
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version from the successful package job, for example 1.0.0'
+        required: true
+        type: string
+      build_run_id:
+        description: 'Release packages run ID whose package job succeeded'
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: write
+
+concurrency:
+  group: draft-release-${{ inputs.version }}
+  cancel-in-progress: false
+
+jobs:
+  draft:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      RELEASE_VERSION: ${{ inputs.version }}
+      BUILD_RUN_ID: ${{ inputs.build_run_id }}
+    steps:
+      - name: Verify build provenance and reserved tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || exit 1
+          [[ "$BUILD_RUN_ID" =~ ^[0-9]+$ ]] || exit 1
+          gh api "repos/$GH_REPO/actions/runs/$BUILD_RUN_ID" > run.json
+          gh api --paginate --slurp "repos/$GH_REPO/actions/runs/$BUILD_RUN_ID/jobs?filter=all&per_page=100" > jobs.json
+          gh api "repos/$GH_REPO/commits/v$RELEASE_VERSION" --jq .sha > tag-sha.txt
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          run = json.loads(Path('run.json').read_text())
+          jobs = [job for page in json.loads(Path('jobs.json').read_text()) for job in page['jobs']]
+          assert run['path'] == '.github/workflows/release.yml', 'Unexpected source workflow'
+          assert run['event'] == 'workflow_dispatch' and run['head_branch'] == 'main', 'Build must originate from main'
+          assert run['head_repository']['full_name'] == os.environ['GH_REPO'], 'Unexpected source repository'
+          assert any(j['name'] == 'package' and j['conclusion'] == 'success' for j in jobs), 'Package job has not succeeded'
+          assert Path('tag-sha.txt').read_text().strip() == run['head_sha'], 'Version tag does not match the build commit'
+          with open(os.environ['GITHUB_ENV'], 'a') as stream:
+              stream.write('SOURCE_COMMIT=' + run['head_sha'] + '\n')
+          PY
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: release-downloads
+          path: downloads
+          run-id: ${{ inputs.build_run_id }}
+          github-token: ${{ github.token }}
+      - name: Verify package metadata and checksums
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, os
+          from pathlib import Path
+          root = Path('downloads')
+          version = os.environ['RELEASE_VERSION']
+          info = json.loads((root / 'release-info.json').read_text(encoding='utf-8-sig'))
+          assert info['version'] == version and info['commit'] == os.environ['SOURCE_COMMIT'], 'Artifact identity mismatch'
+          expected = {f'ChordLibrary-{version}-windows-x64-setup.exe', f'ChordLibrary-{version}-android.apk', 'release-info.json'}
+          if info['windowsSigned'] is False:
+              expected.add('WINDOWS-UNSIGNED.txt')
+          assert {p.name for p in root.iterdir()} == expected | {'SHA256SUMS.txt'}, 'Unexpected or missing download files'
+          checked = set()
+          for line in (root / 'SHA256SUMS.txt').read_text(encoding='utf-8-sig').splitlines():
+              digest, name = line.split('  ', 1)
+              assert name in expected and name not in checked, 'Unexpected/duplicate checksum entry'
+              assert hashlib.sha256((root / name).read_bytes()).hexdigest() == digest, f'Checksum mismatch: {name}'
+              checked.add(name)
+          assert checked == expected, 'Incomplete checksum manifest'
+          PY
+      - name: Create draft release
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            echo "Windows x64 installer and signed Android APK for Chord Library $RELEASE_VERSION."
+            echo
+            echo "Source commit: $SOURCE_COMMIT"
+            echo
+            echo 'Windows: run the setup executable. Internet is needed if Microsoft WebView2 is missing.'
+            echo 'Android: install the APK; permit installation from the chosen download source if prompted.'
+            echo 'Development APKs have a different signing identity. Export local data before uninstalling a development APK to switch to a release.'
+            echo 'Updates are installed manually. Back up your data before upgrading.'
+            if [ -f downloads/WINDOWS-UNSIGNED.txt ]; then
+              echo
+              cat downloads/WINDOWS-UNSIGNED.txt
+            fi
+            echo
+            echo 'Before publishing: test installation, authentication, import and two-device synchronization. This draft does not establish production readiness.'
+          } > release-notes.md
+          # Use the existing verified tag; do not send a stale target_commitish.
+          gh release create "v$RELEASE_VERSION" downloads/* --verify-tag --title "Chord Library $RELEASE_VERSION" --notes-file release-notes.md --draft

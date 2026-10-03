@@ -25,10 +25,12 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  package:
+  prepare:
     if: github.ref == 'refs/heads/main'
-    runs-on: windows-2025
-    timeout-minutes: 90
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
     defaults:
       run:
         shell: pwsh
@@ -43,6 +45,7 @@ jobs:
       - name: Check version and signing configuration
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
@@ -60,6 +63,39 @@ jobs:
           $existing = gh release list --limit 1000 --json tagName
           Assert-NativeSuccess 'Read existing releases'
           if (@($existing | ConvertFrom-Json | Where-Object tagName -eq "v$env:RELEASE_VERSION").Count) { throw 'This release version already exists, including drafts.' }
+          # Reserve the exact source commit while it is still a branch head.
+          # GitHub restricts GITHUB_TOKEN tag creation on older workflow-changing
+          # commits, so waiting until after a long build can cause HTTP 403.
+          $refs = gh api "repos/$env:GH_REPO/git/matching-refs/tags/v$env:RELEASE_VERSION"
+          Assert-NativeSuccess 'Read release tag references'
+          $existingTag = @($refs | ConvertFrom-Json | Where-Object ref -eq "refs/tags/v$env:RELEASE_VERSION")
+          if ($existingTag.Count) {
+            $tagCommit = gh api "repos/$env:GH_REPO/commits/v$env:RELEASE_VERSION" --jq .sha
+            Assert-NativeSuccess 'Resolve release tag'
+            if ($tagCommit -ne $env:GITHUB_SHA) { throw 'This version is reserved for a different commit. Choose a new version.' }
+          } else {
+            $head = gh api "repos/$env:GH_REPO/git/ref/heads/main" --jq .object.sha
+            Assert-NativeSuccess 'Read main head'
+            if ($head -ne $env:GITHUB_SHA) { throw 'Main changed before preparation. Start a fresh run from main.' }
+            gh api --method POST "repos/$env:GH_REPO/git/refs" -f "ref=refs/tags/v$env:RELEASE_VERSION" -f "sha=$env:GITHUB_SHA" --silent
+            Assert-NativeSuccess 'Reserve release tag'
+          }
+
+  package:
+    needs: prepare
+    runs-on: windows-2025
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      RELEASE_VERSION: ${{ inputs.version }}
+      BUILD_NUMBER: ${{ inputs.build_number }}
+      ALLOW_UNSIGNED_WINDOWS: ${{ inputs.unsigned_windows }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         with:
           global-json-file: global.json
@@ -119,36 +155,10 @@ jobs:
 
   draft-release:
     needs: package
-    runs-on: ubuntu-latest
     permissions:
       contents: write
-    steps:
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          name: release-downloads
-          path: downloads
-      - name: Create draft release
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          RELEASE_VERSION: ${{ inputs.version }}
-        run: |
-          set -euo pipefail
-          {
-            echo "Windows x64 installer and signed Android APK for Chord Library $RELEASE_VERSION."
-            echo
-            echo "Source commit: $GITHUB_SHA"
-            echo
-            echo 'Windows: run the setup executable. Internet is needed if Microsoft WebView2 is missing.'
-            echo 'Android: install the APK; permit installation from the chosen download source if prompted.'
-            echo 'Existing development APKs may require uninstalling first because their signing identity differs. Export any local data before uninstalling.'
-            echo 'Updates are installed manually. Back up your data before upgrading.'
-            if [ -f downloads/WINDOWS-UNSIGNED.txt ]; then
-              echo
-              cat downloads/WINDOWS-UNSIGNED.txt
-            fi
-            echo
-            echo 'Before publishing: test installation, authentication, import and two-device synchronization. This draft does not establish production readiness.'
-          } > release-notes.md
-          gh release create "v$RELEASE_VERSION" downloads/* --target "$GITHUB_SHA" --title "Chord Library $RELEASE_VERSION" --notes-file release-notes.md --draft
+      actions: read
+    uses: ./.github/workflows/draft-release.yml
+    with:
+      version: ${{ inputs.version }}
+      build_run_id: ${{ github.run_id }}

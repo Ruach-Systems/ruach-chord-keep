@@ -1,5 +1,16 @@
 # Validation — October 3, 2026
 
+## Release automation validation
+
+- Added push/PR verification and manually dispatched GitHub draft-release workflows. Workflow syntax passed actionlint 1.7.12; PowerShell parsing and valid/invalid release-version checks passed.
+- [GitHub Verify run 37132373447](https://github.com/Ruach-Systems/ruach-chord-library/actions/runs/37132373447) passed on a hosted Windows runner at commit `eb5f0e4`, including release-script validation, the existing test suites and both native platform builds.
+- Published a local self-contained Windows x64 Release build and compiled the unsigned Inno Setup installer (83,412,938 bytes). Silent installation, installed executable/runtime/web-asset hash checks, uninstall registration and silent uninstallation passed. No release UI/authentication claim is inferred from these installation checks.
+- Published a local Android Release APK (40,314,770 bytes). Android apksigner verified APK v2/v3 signatures with the permanent Ruach Systems key. Package metadata confirms `com.louiejeg.chordlibrary`, display version `1.0.0`, version code `1`, minimum API 24, target API 36, ARM64/x64 libraries and no debuggable flag. Shared JavaScript assets are present. Device runtime remains unverified.
+- Android signing secrets were configured in the private GitHub repository. The local key/password backup is ignored by Git, with its password encrypted using Windows DPAPI. A portable external backup is still the owner's responsibility.
+- The user selected unsigned Windows installers for initial distribution. Trusted Windows signing remains optional and has not been exercised with a production certificate.
+
+See [release instructions](releases.md) for workflow controls, signing setup and the manual publication step.
+
 Source inspected: `louieje-g/chordlibrary` commit `230ad36e863f3175438a92520b3a567d516c2afe`. The original checkout remains unmodified. This report distinguishes completed checks from release work still requiring credentials or devices.
 
 ## Automated checks
