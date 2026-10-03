@@ -81,6 +81,8 @@ jobs:
           WINDOWS_CERTIFICATE_BASE64: ${{ secrets.WINDOWS_CERTIFICATE_BASE64 }}
           WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
         run: ./scripts/publish-windows.ps1 -Version $env:RELEASE_VERSION -BuildNumber ([int]$env:BUILD_NUMBER) -AllowUnsigned:($env:ALLOW_UNSIGNED_WINDOWS -eq 'true')
+      - name: Verify Windows installation and uninstall
+        run: ./scripts/test-windows-installer.ps1 -Version $env:RELEASE_VERSION
       - name: Publish signed Android APK
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
