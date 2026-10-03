@@ -6,6 +6,8 @@ The original HTML, CSS, icons and chord-sheet interaction engine are retained in
 
 ## Open or run
 
+For installable packages, use **Actions → Release packages → Run workflow**. It creates a draft release with a Windows installer and signed Android APK. See [release setup and distribution](docs/releases.md) for signing, downloads and updates.
+
 Open `ChordLibrary.slnx` in Visual Studio with the .NET MAUI workload. Select `ChordLibrary.Native` and Windows Machine or your Android device.
 
 ```powershell

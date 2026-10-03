@@ -1,0 +1,152 @@
+name: Release packages
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version, for example 1.0.0 (new version for each release)'
+        required: true
+        type: string
+      build_number:
+        description: 'Android build number: positive integer, increase for every published update'
+        required: true
+        type: string
+      unsigned_windows:
+        description: 'Allow unsigned Windows installer (unknown-publisher warning)'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+# Serialize releases so two runs cannot create the same version concurrently.
+concurrency:
+  group: release-packages
+  cancel-in-progress: false
+
+jobs:
+  package:
+    if: github.ref == 'refs/heads/main'
+    runs-on: windows-2025
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      RELEASE_VERSION: ${{ inputs.version }}
+      BUILD_NUMBER: ${{ inputs.build_number }}
+      ALLOW_UNSIGNED_WINDOWS: ${{ inputs.unsigned_windows }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Check version and signing configuration
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          WINDOWS_CERTIFICATE_BASE64: ${{ secrets.WINDOWS_CERTIFICATE_BASE64 }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+        run: |
+          . ./scripts/release-common.ps1
+          Assert-ReleaseVersion $env:RELEASE_VERSION ([int]$env:BUILD_NUMBER)
+          foreach ($name in 'ANDROID_KEYSTORE_BASE64','ANDROID_STORE_PASSWORD','ANDROID_KEY_PASSWORD','ANDROID_KEY_ALIAS') {
+            if (![Environment]::GetEnvironmentVariable($name)) { throw "Missing repository secret: $name" }
+          }
+          if ($env:ALLOW_UNSIGNED_WINDOWS -ne 'true' -and !$env:WINDOWS_CERTIFICATE_BASE64) { throw 'Windows signing secrets are required unless unsigned Windows is selected.' }
+          if ($env:WINDOWS_CERTIFICATE_BASE64 -and !$env:WINDOWS_CERTIFICATE_PASSWORD) { throw 'Windows certificate password is missing.' }
+          $existing = gh release list --limit 1000 --json tagName
+          Assert-NativeSuccess 'Read existing releases'
+          if (@($existing | ConvertFrom-Json | Where-Object tagName -eq "v$env:RELEASE_VERSION").Count) { throw 'This release version already exists, including drafts.' }
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          global-json-file: global.json
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: microsoft
+          java-version: '21'
+      - name: Install MAUI workloads
+        run: dotnet workload install maui-windows maui-android --skip-manifest-update
+      - name: Run validation
+        run: |
+          ./scripts/test-release-scripts.ps1
+          ./scripts/verify.ps1
+      - name: Publish Windows installer
+        env:
+          WINDOWS_CERTIFICATE_BASE64: ${{ secrets.WINDOWS_CERTIFICATE_BASE64 }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+        run: ./scripts/publish-windows.ps1 -Version $env:RELEASE_VERSION -BuildNumber ([int]$env:BUILD_NUMBER) -AllowUnsigned:($env:ALLOW_UNSIGNED_WINDOWS -eq 'true')
+      - name: Publish signed Android APK
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          $keyFile = Join-Path $env:RUNNER_TEMP 'chord-library-release.keystore'
+          try {
+            [IO.File]::WriteAllBytes($keyFile, [Convert]::FromBase64String($env:ANDROID_KEYSTORE_BASE64))
+            ./scripts/publish-android.ps1 -Version $env:RELEASE_VERSION -BuildNumber ([int]$env:BUILD_NUMBER) -KeystorePath $keyFile -KeyAlias $env:ANDROID_KEY_ALIAS
+          } finally {
+            if (Test-Path -LiteralPath $keyFile) { Remove-Item -LiteralPath $keyFile -Force }
+          }
+      - name: Collect downloads and checksums
+        run: |
+          $root = "artifacts/release/$env:RELEASE_VERSION"
+          New-Item -ItemType Directory -Path artifacts/downloads | Out-Null
+          Copy-Item "$root/windows/ChordLibrary-*-setup.exe" artifacts/downloads
+          Copy-Item "$root/android/ChordLibrary-*-android.apk" artifacts/downloads
+          $unsigned = Test-Path "$root/windows/WINDOWS-UNSIGNED.txt"
+          if ($unsigned) { Copy-Item "$root/windows/WINDOWS-UNSIGNED.txt" artifacts/downloads }
+          @{ version = $env:RELEASE_VERSION; androidBuildNumber = [int]$env:BUILD_NUMBER; commit = $env:GITHUB_SHA; windowsSigned = !$unsigned } |
+            ConvertTo-Json | Set-Content artifacts/downloads/release-info.json
+          Get-ChildItem artifacts/downloads -File | Sort-Object Name | ForEach-Object {
+            '{0}  {1}' -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant(), $_.Name
+          } | Set-Content artifacts/downloads/SHA256SUMS.txt
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-downloads
+          path: artifacts/downloads/*
+          if-no-files-found: error
+          retention-days: 14
+
+  draft-release:
+    needs: package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: release-downloads
+          path: downloads
+      - name: Create draft release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          {
+            echo "Windows x64 installer and signed Android APK for Chord Library $RELEASE_VERSION."
+            echo
+            echo "Source commit: $GITHUB_SHA"
+            echo
+            echo 'Windows: run the setup executable. Internet is needed if Microsoft WebView2 is missing.'
+            echo 'Android: install the APK; permit installation from the chosen download source if prompted.'
+            echo 'Existing development APKs may require uninstalling first because their signing identity differs. Export any local data before uninstalling.'
+            echo 'Updates are installed manually. Back up your data before upgrading.'
+            if [ -f downloads/WINDOWS-UNSIGNED.txt ]; then
+              echo
+              cat downloads/WINDOWS-UNSIGNED.txt
+            fi
+            echo
+            echo 'Before publishing: test installation, authentication, import and two-device synchronization. This draft does not establish production readiness.'
+          } > release-notes.md
+          gh release create "v$RELEASE_VERSION" downloads/* --target "$GITHUB_SHA" --title "Chord Library $RELEASE_VERSION" --notes-file release-notes.md --draft
