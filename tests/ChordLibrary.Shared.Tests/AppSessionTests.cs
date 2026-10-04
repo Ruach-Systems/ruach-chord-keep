@@ -51,7 +51,7 @@ public sealed class AppSessionTests : IDisposable
     }
 
     [Fact]
-    public async Task UnseenSameSongEditProducesRealSyncConflictInsteadOfOverwrite()
+    public async Task NewerLocalEditAutomaticallyWinsAgainstUnseenCloudVersion()
     {
         var app = await SignedAppAsync();
         server.Put(Alpha, "songs", Song("a", "First"), 1);
@@ -63,12 +63,11 @@ public sealed class AppSessionTests : IDisposable
 
         var result = await app.SyncAsync();
 
-        var conflict = Assert.Single(result.Conflicts);
-        Assert.Equal("User changed", conflict.Local.Payload["title"]!.GetValue<string>());
-        Assert.Equal("Cloud changed", conflict.Remote.Payload["title"]!.GetValue<string>());
-        Assert.Equal(1, conflict.Local.ExpectedRevision);
+        Assert.Empty(result.Conflicts);
+        Assert.Equal(1, result.Uploaded);
+        Assert.Equal(0, result.Remaining);
         Assert.Equal("User changed", Title(await app.Store.ReadDocumentAsync(app.ProfileId), "a"));
-        Assert.Equal("Cloud changed", server.Get(Alpha, "songs", "a")["payload"]!["title"]!.GetValue<string>());
+        Assert.Equal("User changed", server.Get(Alpha, "songs", "a")["payload"]!["title"]!.GetValue<string>());
     }
 
     [Fact]

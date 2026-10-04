@@ -21,6 +21,8 @@ public sealed class LibrarySyncState
     public Dictionary<string, string> Snapshot { get; set; } = new(StringComparer.Ordinal);
     public List<PendingLibraryChange> PendingChanges { get; set; } = [];
     public Dictionary<string, long> RemoteRevisions { get; set; } = new(StringComparer.Ordinal);
+    public Dictionary<string, long> DownloadCursors { get; set; } = new(StringComparer.Ordinal);
+    public Dictionary<string, long> RemoteModified { get; set; } = new(StringComparer.Ordinal);
 }
 
 /// <summary>Account-scoped durable storage. Every mutation is serialized and atomically replaces a complete profile.</summary>
@@ -48,7 +50,9 @@ public sealed class LocalLibraryStore
         {
             Snapshot = new(state.Snapshot, StringComparer.Ordinal),
             PendingChanges = state.PendingChanges.Values.Select(CloneChange).ToList(),
-            RemoteRevisions = new(state.RemoteRevisions, StringComparer.Ordinal)
+            RemoteRevisions = new(state.RemoteRevisions, StringComparer.Ordinal),
+            DownloadCursors = new(state.DownloadCursors, StringComparer.Ordinal),
+            RemoteModified = new(state.RemoteModified, StringComparer.Ordinal)
         }, ct);
 
     public Task SaveSnapshotAsync(string profileId, IReadOnlyDictionary<string, string> snapshot, CancellationToken ct = default) =>
@@ -118,6 +122,53 @@ public sealed class LocalLibraryStore
         bool deleted, long revision, CancellationToken ct = default) => WithStateAsync(profileId, true, state =>
             ApplyRemote(state, collection, id, payload, deleted, revision), ct);
 
+    /// <summary>
+    /// Resolves competing edits by updatedAt (cloud wins ties). A download checkpoint is committed
+    /// in the same atomic profile write as its record, deletion, or rebased pending upload.
+    /// Upload responses must not advance it: other records can have intervening revisions.
+    /// </summary>
+    public Task<PendingLibraryChange?> MergeSyncRemoteAsync(string profileId, string collection, string id,
+        JsonObject payload, bool deleted, long revision, bool checkpoint = false, CancellationToken ct = default) =>
+        WithStateAsync(profileId, true, state =>
+        {
+            if (revision <= 0) throw new LibraryValidationException("Remote revisions must be positive.");
+            var item = ValidateRemote(collection, id, payload, deleted);
+            var key = Key(collection, id);
+            if (state.RemoteRevisions.GetValueOrDefault(key) <= revision)
+            {
+                // A client with an older clock or older app can publish an earlier edit with a
+                // higher server revision. Retain our newer saved version, including deletions.
+                if (!state.PendingChanges.ContainsKey(key))
+                {
+                    var current = Records(LibraryDocument.FromSnapshot(state.Snapshot), collection)
+                        .FirstOrDefault(record => LibraryValidation.Id(record) == id);
+                    if (current is null && state.RemoteDeleted.Contains(key) && state.RemoteModified.TryGetValue(key, out var deletedAt))
+                        current = new JsonObject { ["id"] = id, ["updatedAt"] = deletedAt, ["deleted"] = true };
+                    if (current is not null && LibraryValidation.Modified(current) > LibraryValidation.Modified(item))
+                        QueueChange(state, collection, id, current, LibraryValidation.IsDeleted(current));
+                }
+                if (state.PendingChanges.TryGetValue(key, out var pending)
+                    && LibraryValidation.Modified(pending.Payload) > LibraryValidation.Modified(item))
+                {
+                    pending.ExpectedRevision = revision;
+                    state.RemoteRevisions[key] = revision;
+                    state.RemoteModified[key] = LibraryValidation.Modified(item);
+                    if (pending.Deleted) state.RemoteDeleted.Add(key); else state.RemoteDeleted.Remove(key);
+                    if (collection == "songs" && pending.Deleted) RemoveDeletedSongReferences(state, id);
+                }
+                else
+                {
+                    // Compare against the current pending version under the profile lock, including
+                    // edits made while the network request was running.
+                    var hadPending = state.PendingChanges.Remove(key);
+                    ApplyRemote(state, collection, id, item, deleted, revision, force: hadPending);
+                }
+            }
+            if (checkpoint)
+                state.DownloadCursors[collection] = Math.Max(state.DownloadCursors.GetValueOrDefault(collection), revision);
+            return state.PendingChanges.TryGetValue(key, out var remaining) ? CloneChange(remaining) : null;
+        }, ct);
+
     /// <summary>Accepts a reviewed cloud conflict only while the local version is still the version shown to the user.</summary>
     public Task<bool> AcceptConflictRemoteAsync(string profileId, string collection, string id, string localVersion,
         JsonObject payload, bool deleted, long revision, CancellationToken ct = default) => WithStateAsync(profileId, true, state =>
@@ -145,6 +196,7 @@ public sealed class LocalLibraryStore
         records.RemoveAll(x => LibraryValidation.Id(x) == id);
         if (!deleted) records.Add(item);
         state.RemoteRevisions[key] = revision;
+        state.RemoteModified[key] = LibraryValidation.Modified(item);
         if (deleted) state.RemoteDeleted.Add(key); else state.RemoteDeleted.Remove(key);
         document.WriteTo(state.Snapshot);
         if (collection == "songs" && deleted) RemoveDeletedSongReferences(state, id);
@@ -158,13 +210,15 @@ public sealed class LocalLibraryStore
 
     /// <summary>An upload only clears the exact local version sent; later edits retain their pending state.</summary>
     public Task AcknowledgeAsync(string profileId, string collection, string id, string localVersion,
-        long remoteRevision, CancellationToken ct = default) => WithStateAsync(profileId, true, state =>
+        long remoteRevision, CancellationToken ct = default, long? modifiedAt = null) => WithStateAsync(profileId, true, state =>
     {
         if (remoteRevision <= 0) throw new LibraryValidationException("Remote revisions must be positive.");
         var key = Key(collection, id);
         state.RemoteRevisions[key] = Math.Max(state.RemoteRevisions.GetValueOrDefault(key), remoteRevision);
         if (state.PendingChanges.TryGetValue(key, out var pending))
         {
+            if (modifiedAt is not null) state.RemoteModified[key] = modifiedAt.Value;
+            else if (pending.LocalVersion == localVersion) state.RemoteModified[key] = LibraryValidation.Modified(pending.Payload);
             if (pending.LocalVersion == localVersion)
             {
                 if (pending.Deleted) state.RemoteDeleted.Add(key); else state.RemoteDeleted.Remove(key);
@@ -348,7 +402,9 @@ public sealed class LocalLibraryStore
             var state = JsonSerializer.Deserialize<PersistedState>(json, SerializerOptions)
                 ?? throw new LibraryValidationException("The local profile is empty or damaged.");
             if (state.SchemaVersion != 1) throw new LibraryValidationException("This local profile version is not supported.");
-            if (state.Snapshot is null || state.PendingChanges is null || state.RemoteRevisions is null || state.RemoteDeleted is null)
+            if (state.Snapshot is null || state.PendingChanges is null || state.RemoteRevisions is null || state.RemoteDeleted is null
+                || state.RemoteModified is null || state.DownloadCursors is null
+                || state.DownloadCursors.Any(x => x.Key is not ("songs" or "setlists") || x.Value < 0))
                 throw new LibraryValidationException("The local profile is damaged.");
             var document = LibraryDocument.FromSnapshot(state.Snapshot);
             EnsureUnique(document.Songs);
@@ -428,6 +484,8 @@ public sealed class LocalLibraryStore
         };
         public Dictionary<string, PendingLibraryChange> PendingChanges { get; set; } = new(StringComparer.Ordinal);
         public Dictionary<string, long> RemoteRevisions { get; set; } = new(StringComparer.Ordinal);
+        public Dictionary<string, long> DownloadCursors { get; set; } = new(StringComparer.Ordinal);
+        public Dictionary<string, long> RemoteModified { get; set; } = new(StringComparer.Ordinal);
         public HashSet<string> RemoteDeleted { get; set; } = new(StringComparer.Ordinal);
     }
 }

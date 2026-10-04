@@ -43,7 +43,7 @@ public interface ISecretStore
     Task RemoveAsync(string key, CancellationToken cancellationToken = default);
 }
 
-public sealed record SupabaseUser(string Id, string? Email);
+public sealed record SupabaseUser(string Id, string? Email, string? DisplayName = null, string? AvatarUrl = null);
 
 public sealed class AuthSession
 {

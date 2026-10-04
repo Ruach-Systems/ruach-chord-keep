@@ -485,7 +485,7 @@
     if (!sidebarOverlay) {
       sidebarOverlay = document.createElement('div');
       sidebarOverlay.className = 'sidebar-overlay';
-      document.body.appendChild(sidebarOverlay);
+      document.querySelector('.app-main').appendChild(sidebarOverlay);
       sidebarOverlay.addEventListener('click', closeSidebar);
     }
   }
@@ -2107,12 +2107,13 @@
   }
 
   async function startQrScan() {
+    if (!NativeBridge.supportsQrImport) return;
     if (NativeBridge.isNative) {
       try {
         const payload = await NativeBridge.scanQr();
         if (payload) handleScannedSongQr(payload);
       } catch (error) {
-        showToast('Unable to read QR photo: ' + error.message, 'error');
+        showToast('Unable to scan QR code: ' + error.message, 'error');
       }
       return;
     }
@@ -3045,8 +3046,8 @@
     }
     if (btnScanQr) {
       if (NativeBridge.isNative) {
-        btnScanQr.title = 'Take a photo of a song QR code';
-        btnScanQr.setAttribute('aria-label', 'Take a photo of a song QR code');
+        btnScanQr.title = 'Scan a song QR code or choose a QR image';
+        btnScanQr.setAttribute('aria-label', 'Scan a song QR code or choose a QR image');
       }
       btnScanQr.addEventListener('click', startQrScan);
     }

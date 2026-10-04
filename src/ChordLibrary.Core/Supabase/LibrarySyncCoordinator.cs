@@ -1,7 +1,7 @@
 namespace ChordLibrary.Core.Supabase;
 
 public sealed record LibrarySyncConflict(PendingLibraryChange Local, RemoteDocument Remote);
-public sealed record LibrarySyncResult(int Pulled, int Uploaded, IReadOnlyList<LibrarySyncConflict> Conflicts);
+public sealed record LibrarySyncResult(int Pulled, int Uploaded, IReadOnlyList<LibrarySyncConflict> Conflicts, int Remaining = 0);
 
 /// <summary>Explicit account-scoped synchronization. Network errors never clear pending edits or tombstones.</summary>
 public sealed class LibrarySyncCoordinator(LocalLibraryStore store, SupabaseDataClient remote, SupabaseAuthClient auth)
@@ -21,38 +21,62 @@ public sealed class LibrarySyncCoordinator(LocalLibraryStore store, SupabaseData
             if (!string.Equals(profileId, "user:" + owner, StringComparison.Ordinal))
                 throw new InvalidOperationException("Only the signed-in account's local library can sync. Import guest data explicitly first.");
             var pulled = 0;
+            var initial = await store.ReadSyncStateAsync(profileId, cancellationToken).ConfigureAwait(false);
             foreach (var collection in CollectionsInDependencyOrder)
             {
-                // Full keyset-paginated pulls are intentional: no unpersisted cursor can skip a failed local apply.
-                await foreach (var document in remote.PullAsync(collection, cancellationToken: cancellationToken, expectedOwner: owner).ConfigureAwait(false))
+                await foreach (var document in remote.PullAsync(collection, initial.DownloadCursors.GetValueOrDefault(collection),
+                    cancellationToken: cancellationToken, expectedOwner: owner).ConfigureAwait(false))
                 {
                     EnsureAccount(owner);
-                    await store.AcceptRemoteAsync(profileId, document.Collection, document.Id, document.Payload,
-                        document.Deleted, document.Revision, cancellationToken).ConfigureAwait(false);
+                    await store.MergeSyncRemoteAsync(profileId, document.Collection, document.Id, document.Payload,
+                        document.Deleted, document.Revision, checkpoint: true, ct: cancellationToken).ConfigureAwait(false);
                     pulled++;
                 }
             }
 
-            // Read after pulling, since downloaded deletions can create pending setlist reference repairs.
-            var state = await store.ReadSyncStateAsync(profileId, cancellationToken).ConfigureAwait(false);
             var uploaded = 0;
-            var conflicts = new List<LibrarySyncConflict>();
             foreach (var collection in CollectionsInDependencyOrder)
-            foreach (var pending in state.PendingChanges.Where(change => change.Collection == collection))
             {
-                EnsureAccount(owner);
-                var result = await remote.ApplyAsync(pending.Collection, pending.Id, pending.Payload, pending.Deleted,
-                    pending.ExpectedRevision, cancellationToken, expectedOwner: owner).ConfigureAwait(false);
-                EnsureAccount(owner);
-                if (result.Applied)
+                // Song downloads or upload conflicts can repair setlist memberships. Read their queue
+                // after songs finish, and always upload referenced songs before their setlists.
+                var state = await store.ReadSyncStateAsync(profileId, cancellationToken).ConfigureAwait(false);
+                foreach (var change in state.PendingChanges.Where(change => change.Collection == collection))
                 {
-                    await store.AcknowledgeAsync(profileId, pending.Collection, pending.Id, pending.LocalVersion,
-                        result.Document.Revision, cancellationToken).ConfigureAwait(false);
-                    uploaded++;
+                    PendingLibraryChange? pending = change;
+                    var key = collection + ":" + change.Id;
+                    if (pending.ExpectedRevision is not null && (!state.RemoteModified.TryGetValue(key, out var knownTime)
+                        || LibraryValidation.Modified(pending.Payload) <= knownTime))
+                    {
+                        // An older/equal local timestamp can conflict even when the revision matches.
+                        // Retrieve only this dirty record to restore/rebase against the saved cloud copy.
+                        var current = await remote.GetAsync(collection, pending.Id, cancellationToken, expectedOwner: owner).ConfigureAwait(false);
+                        EnsureAccount(owner);
+                        if (current is not null)
+                            pending = await store.MergeSyncRemoteAsync(profileId, current.Collection, current.Id, current.Payload,
+                                current.Deleted, current.Revision, ct: cancellationToken).ConfigureAwait(false);
+                    }
+                    // Concurrent writers may race again. Bound this pass; the durable pending queue
+                    // retries on the next sync without prompting or reporting it as fully synced.
+                    for (var attempt = 0; pending is not null && attempt < 5; attempt++)
+                    {
+                        EnsureAccount(owner);
+                        var result = await remote.ApplyAsync(pending.Collection, pending.Id, pending.Payload, pending.Deleted,
+                            pending.ExpectedRevision, cancellationToken, expectedOwner: owner).ConfigureAwait(false);
+                        EnsureAccount(owner);
+                        if (result.Applied)
+                        {
+                            await store.AcknowledgeAsync(profileId, pending.Collection, pending.Id, pending.LocalVersion,
+                                result.Document.Revision, cancellationToken, modifiedAt: LibraryValidation.Modified(pending.Payload)).ConfigureAwait(false);
+                            uploaded++;
+                            break;
+                        }
+                        pending = await store.MergeSyncRemoteAsync(profileId, result.Document.Collection, result.Document.Id,
+                            result.Document.Payload, result.Document.Deleted, result.Document.Revision, ct: cancellationToken).ConfigureAwait(false);
+                    }
                 }
-                else conflicts.Add(new LibrarySyncConflict(pending, result.Document));
             }
-            return new LibrarySyncResult(pulled, uploaded, conflicts);
+            var remaining = await store.ReadSyncStateAsync(profileId, cancellationToken).ConfigureAwait(false);
+            return new LibrarySyncResult(pulled, uploaded, [], remaining.PendingChanges.Count);
         }
         finally { _gate.Release(); }
     }

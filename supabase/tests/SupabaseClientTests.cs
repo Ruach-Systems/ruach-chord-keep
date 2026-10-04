@@ -8,7 +8,7 @@ using ChordLibrary.Core.Supabase;
 
 namespace ChordLibrary.Supabase.Tests;
 
-public sealed class SupabaseClientTests
+public sealed partial class SupabaseClientTests
 {
     private const string UserId = "ac100000-0000-4000-8000-000000000001";
     private static readonly SupabaseOptions Options = new("https://example.supabase.co", "sb_publishable_test");
@@ -337,7 +337,7 @@ public sealed class SupabaseClientTests
     }
 
     [Fact]
-    public async Task SyncPreservesLocalConflictAndRejectsGuestOrOtherAccount()
+    public async Task SyncKeepsCloudOnEqualTimestampAndRejectsGuestOrOtherAccount()
     {
         using var directory = new TemporaryDirectory();
         var store = new LocalLibraryStore(directory.Path);
@@ -358,13 +358,13 @@ public sealed class SupabaseClientTests
         await Assert.ThrowsAsync<InvalidOperationException>(() => sync.SyncAsync("guest"));
         await Assert.ThrowsAsync<InvalidOperationException>(() => sync.SyncAsync("user:somebody-else"));
         var result = await sync.SyncAsync(profile);
-        Assert.Single(result.Conflicts);
+        Assert.Empty(result.Conflicts);
         Assert.Equal(0, result.Uploaded);
         var state = await store.ReadSyncStateAsync(profile);
-        Assert.Single(state.PendingChanges);
-        Assert.Contains("Local", state.Snapshot["chord-library-songs"]);
+        Assert.Empty(state.PendingChanges);
+        Assert.Contains("Remote", state.Snapshot["chord-library-songs"]);
         var reopened = new LocalLibraryStore(directory.Path);
-        Assert.Single((await reopened.ReadSyncStateAsync(profile)).PendingChanges);
+        Assert.Empty((await reopened.ReadSyncStateAsync(profile)).PendingChanges);
     }
 
     [Fact]

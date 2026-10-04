@@ -1,43 +1,22 @@
 # Supabase setup and migration
 
-This folder contains the manual database migrations, database security tests, and C# transport/authentication tests. On October 3, 2026, migrations 001–003 and Windows/Android redirect URLs were applied to project `ykfmjwlouvbapzqlqczw` through its Chrome dashboard. Active storage is relational PostgreSQL. Hosted relational/security checks passed, including account cleanup after forward fix 003; test fixtures were rolled back. Google provider setup and live authentication/device checks remain outstanding; no real Firebase export or user migration has been performed.
+This folder contains the manual database migrations, database security tests, and C# transport/authentication tests. On October 3, 2026, migrations 001–003 and Windows/Android redirect URLs were applied to project `ykfmjwlouvbapzqlqczw` through its Chrome dashboard. Active storage is relational PostgreSQL. Hosted relational/security checks passed, including account cleanup after forward fix 003; test fixtures were rolled back. Google provider enablement and the authorization redirect were verified on October 4, 2026. Full two-device authentication/sync validation remains outstanding.
 
 ## Configure a project
 
 1. Create or select the destination Supabase project. Test first in a disposable development project.
 2. Review and apply the numbered SQL files in `migrations/` in order using the Supabase SQL editor. `001` establishes revision transport; `002` converts storage to typed relational tables; subsequent forward migrations complete database fixes. Each file runs once, not automatically at app startup. See [relational schema](RELATIONAL_SCHEMA.md).
-3. Supply only the project URL and **publishable key** to the native app. A legacy `anon` key is also accepted. Never put a secret key, `service_role` key, database password, Google client secret, or Firebase admin credential in this app, its WebView, source files, or exports.
-4. Enable the desired Supabase Auth providers. Configure email confirmation, recovery email delivery, and the project's Site URL before testing password recovery. Email/password registration may return a confirmation requirement instead of a session.
+3. Configure the project URL and **publishable key** in the bundled `src/ChordLibrary.Shared/Assets/supabase-public.json` before building. Connection settings are not exposed in the account dialog. A legacy `anon` key is also accepted. Never put a secret key, `service_role` key, database password, Google client secret, or Firebase admin credential in this app, its WebView, source files, or exports.
+4. The app offers Google sign-in only, matching the reference app. Email/password, signup confirmation and password recovery controls are not available in the app. This UI change does not disable existing hosted Auth providers or delete existing accounts.
 5. For Google, configure the Google provider in the Supabase dashboard and register the Supabase provider callback URL with Google. The native app begins sign-in using `SupabaseAuthClient.BeginGoogleSignInAsync` and passes the resulting app callback to `CompleteGoogleSignInAsync`.
 6. Allow the actual native callback URI in Supabase Auth redirect URLs. The callback supplied to the C# method has no query or fragment; the client adds a random `app_state` query. An example narrow development pattern is `chordlibrary://auth/callback*`. The native host's registered scheme/path and the configured allow-list must match. Confirm the exact pattern with a development sign-in before release. Prefer verified HTTPS app links where available for a production app.
 7. Complete the release checks below with two separate test users before importing valuable data.
 
 Supabase documents [native app redirects](https://supabase.com/docs/guides/auth/native-mobile-deep-linking), [redirect allow-list patterns](https://supabase.com/docs/guides/auth/redirect-urls), and the [PKCE code exchange](https://supabase.com/docs/guides/auth/sessions/pkce-flow). The REST client follows the official [Auth OpenAPI contract](https://github.com/supabase/auth/blob/master/openapi.yaml).
 
-## Password recovery with the default email
+## Authentication client coverage
 
-The default Supabase recovery email works without editing templates or changing a plan. Request recovery in the native app, then **copy the reset link's address from the email without opening it** and paste it into the app's recovery field. Opening the link first may consume its one-time token. If it has already been opened or expired, request a fresh recovery email. Email link wrappers from tracking/security services are not accepted; the pasted link must be the original URL for the configured Supabase project.
-
-The auth client validates the project's exact origin, `/auth/v1/verify` path, and `type=recovery`, then exchanges the URL's `token` as a `token_hash` in a POST to the configured project's verification endpoint. It does not navigate to the pasted URL, follow `redirect_to`, or store/log the link. Foreign projects, duplicate/missing/invalid parameters, URL credentials, and fragments are rejected before any network request. HTTP links are accepted only for a matching configured loopback development project; hosted projects require HTTPS.
-
-This uses `RequestPasswordResetAsync(email, null)` followed by `VerifyRecoveryLinkAsync(pastedLink)` and `UpdatePasswordAsync(newPassword)`. It avoids dependence on a working browser redirect or a desktop callback listener. The same default-email mechanism is available for signup through `VerifySignupLinkAsync(pastedLink)`, which accepts only `type=signup` and establishes the confirmed account's native session. Supabase's [Auth OpenAPI contract](https://github.com/supabase/auth/blob/master/openapi.yaml) specifies the GET link's `token` parameter and the POST verification body's `token_hash` plus `type`.
-
-A successful verification signs in the recovery account even if a subsequent password change is rejected by a password policy; the host must select and display that authenticated account consistently. Verification failures must not attempt a password update. Test real delivery, a valid original link, wrong-action/foreign links, and expired/used links before release.
-
-### Optional emailed code
-
-If email template editing is available for the project, an emailed code can also be used. In the Supabase dashboard, edit **Authentication → Email Templates → Reset password** to include `{{ .Token }}`. This is optional; no plan upgrade, SMTP change, or template edit is required for the default-link workflow above. Example code template:
-
-```html
-<h2>Reset your Chord Library password</h2>
-<p>Enter this recovery code in Chord Library:</p>
-<p><strong>{{ .Token }}</strong></p>
-<p>If you did not request this, you can ignore this email.</p>
-```
-
-Keep the code as text; do not convert it to a number because it can begin with zero. Its configured length, expiry, and rate limits are controlled by Supabase. The app requests it with `RequestPasswordResetAsync(email, null)`, verifies it with `VerifyRecoveryCodeAsync(email, code)`, then changes the password with `UpdatePasswordAsync(newPassword)` using the returned authenticated session.
-
-The default link-only template does not display a code; use the copied link with that template. Supabase documents the [email template token variable](https://supabase.com/docs/guides/auth/auth-email-templates) and [OTP verification types including recovery](https://supabase.com/docs/reference/csharp/auth-verifyotp).
+The Core authentication client retains tested email/password and recovery APIs for compatibility, but the app exposes only Google sign-in. There are no email confirmation or recovery fields in the account dialog.
 
 ## Move an existing user's library
 
@@ -63,10 +42,10 @@ Active storage uses `public.songs`, `public.setlists` and `public.setlist_songs`
 - Identical retry payloads succeed without producing another revision. This recovers safely when an upload succeeded but its response was lost.
 - Deletes remain tombstones so another device cannot silently resurrect a deleted record. Do not purge tombstones until a separately designed device/cursor retention policy exists.
 - A per-owner database transaction lock orders committed revisions. Pulls use keyset pagination and continue until an empty page, including when a project's REST row limit is smaller than the requested page size.
-- Sync downloads into clean local records, then uploads pending changes. Conflicts preserve the local content and return the remote content for review. Errors do not acknowledge pending edits or tombstones. An acknowledgment only clears the exact local version that was uploaded.
+- Sync downloads changes after the durable per-collection checkpoint, then uploads pending changes. Competing versions are resolved automatically by `updatedAt`; cloud wins equal timestamps. Edits and deletions use the same rule. The merge checks the current local version under the profile lock, so a later edit made during a network request is also compared. An acknowledgment only clears the exact local version that was uploaded. Network failures retain pending edits and tombstones.
 - Local libraries use `guest` and `user:<Supabase UUID>` profiles. Account changes do not silently migrate guest data or another user's data. Native session secrets remain outside all library snapshots and exports.
 
-The current coordinator performs complete paginated pulls on each sync. This favors recovery and correctness over incremental bandwidth. An incremental cursor can be added later only if the cursor and every accepted local change are committed atomically.
+Song and setlist download checkpoints are stored in the same atomic profile write as each applied/merged remote record. Interrupted downloads resume after the last committed record. First-time accounts and upgraded profiles without checkpoints start at revision zero once; unchanged later syncs return empty pages instead of downloading the library. Upload responses never advance these checkpoints. Older/equal local timestamps can trigger a targeted lookup of only that pending record. The existing per-owner transaction lock orders committed server revisions, so this client change requires no new hosted migration. Keep tombstones and route all writes through the existing RPC to preserve that ordering. LWW uses the records' edit timestamps, not the upload arrival time; keep device clocks synchronized. After five competing upload revisions, leave the remaining work queued for the next automatic sync rather than prompting.
 
 ## Run checks
 
@@ -90,4 +69,4 @@ psql "$env:CHORDLIBRARY_TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/tests/
 
 The SQL test fixtures and their data are rolled back. The migration itself creates persistent tables/functions and must only be applied to the intended project. The test script checks two-user isolation, denied anonymous access/direct writes, insert-only collisions, stale-write rejection, idempotent retries, preserved JSON, and tombstones. These checks were executed successfully through the authorized project's SQL Editor (with the psql-only `\echo` replaced by a result query). PostgreSQL sequence values can advance despite rollback; no test users or documents remain.
 
-Before release, verify live email confirmation/recovery, Google redirect handling on Windows and Android, refresh/relaunch, two-device conflicts, offline edits/deletes, account switching, exports/imports with real representative data, and the SQL tests against the actual schema. C# tests and a successful native build do not establish hosted configuration or authentication readiness.
+Before release, verify live Google sign-in and redirect handling on Windows and Android, refresh/relaunch, two-device conflicts, offline edits/deletes, account switching, exports/imports with real representative data, and the SQL tests against the actual schema. C# tests and a successful native build do not establish hosted configuration or authentication readiness.

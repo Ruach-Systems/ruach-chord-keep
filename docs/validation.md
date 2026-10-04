@@ -1,4 +1,38 @@
-# Validation — October 3, 2026
+# Validation
+
+## Mobile drawer and Google account photo — October 4, 2026
+
+- The mobile drawer and its backdrop now sit inside `.app-main`, below the header in normal layout. Native CSS overrides the original fixed viewport offset; desktop keeps its existing persistent drawer. A browser fixture using the shipped HTML/CSS verified a 360px mobile viewport with a 28px safe area and 72px header: header bottom, drawer top, and tab top were all 100px. At 1024px, the drawer also began at 100px and remained 280px wide. This is browser layout evidence, not an Android screenshot.
+- Auth sessions preserve Google display name and avatar/picture metadata. The account icon uses HTTPS Google profile photos, shows the default icon until loading succeeds, and falls back if a photo is unavailable. Sign-out removes the photo. Existing saved sessions from older builds gain profile metadata on their next token refresh or sign-in.
+- 58 Supabase, 12 shared-session and 15 JavaScript checks passed, including profile metadata variants, session restore, malformed metadata, image failure, URL filtering and sign-out cleanup.
+- Final Windows Release and Android Debug builds, including the drawer, profile photo and QR changes, passed with zero warnings/errors. `git diff --check` passed and no unmerged paths were found. These changes are local and are not yet included in a published installer or GitHub release.
+
+## Android QR import — October 4, 2026
+
+- Replaced the photo-capture intent with an Android-only native live scanner using [ZXing.Net.Maui](https://github.com/Redth/ZXing.Net.Maui), pinned to 0.10.4. The scanner automatically reads QR codes into the existing song form; saving remains explicit. It also offers a system image file picker, including when camera permission is denied. No image is uploaded to a server.
+- The camera is disconnected on close, background, and image-picker transitions; duplicate/late camera callbacks are ignored. Image decoding runs off the UI thread and supports rotated/inverted codes. Invalid images leave the scanner open with a useful message.
+- QR import is hidden by default and enabled only by the Android platform capability. Windows and browser preview cannot invoke either QR import bridge operation. QR sharing remains available on desktop.
+- All 14 JavaScript regression checks passed, including platform visibility/dispatch, compact QR payloads, cancellation, invalid QR data and scanner errors.
+- No Android phone/emulator was connected (`adb devices` returned an empty list), so live camera and Android file-picker behavior remain unverified on hardware. The existing installer/draft release has not been replaced.
+
+Device acceptance checks for this change:
+
+1. Open Add song → QR code on Android, allow the camera, and point it at a shared song QR. Verify continuous preview with no shutter screen, automatic return to the populated song form, and correct title/artist/chords after saving. Repeat with a dense chord sheet and a rotated code.
+2. Choose QR image and select a PNG/JPEG or screenshot from Files. Verify the same draft import; test an image without a QR and cancelling the picker, then scan again.
+3. Deny camera permission and confirm image import still works. Enable permission in Android settings and return; verify scanning resumes.
+4. Background/resume the scanner, close with Cancel and Android Back, and reopen. Verify the camera privacy indicator turns off after closing and each scan imports only once.
+5. On Windows, verify Add song has no QR import button and an existing song can still display its sharing QR.
+
+## Incremental sync — October 4, 2026
+
+- Downloads now persist separate song/setlist checkpoints per account and project. Each checkpoint and its merged record are written atomically; interrupted downloads resume from the last committed record. Upload acknowledgments cannot skip intervening changes from other devices.
+- Latest `updatedAt` wins automatically for edits and deletions, with the cloud version winning ties. Targeted reads handle stale local timestamps, revision checks retry concurrent writes, and repeated races leave work pending for the next automatic sync. The account dialog no longer offers conflict decisions.
+- 134 automated checks passed: 55 Core, 55 Supabase transport/auth, 12 shared-session, and 12 JavaScript tests. New coverage includes no-change downloads, restart/resume, legacy profiles, account isolation, tombstones, failed validation, update/deletion ordering, edits during upload, and bounded retries.
+- Windows Release and Android Debug builds passed with zero warnings/errors. These local outputs include the incremental sync and simplified account dialog; the earlier installer/draft release has not been replaced. The running Windows Debug process was left open with its existing build and data.
+- Existing profiles without a checkpoint require one baseline download after upgrading. Subsequent syncs are incremental. No new hosted schema migration is required. These checks use synthetic data and do not replace live two-device validation.
+- Google provider enablement and a redirect to Google's authorization endpoint with the configured callback were verified on October 4. The original release evidence below describes the earlier build.
+
+## Original build — October 3, 2026
 
 ## Release automation validation
 

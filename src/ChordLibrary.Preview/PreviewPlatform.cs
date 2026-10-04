@@ -9,7 +9,7 @@ public sealed class PreviewPlatform(IJSRuntime js, IWebHostEnvironment environme
     public string OAuthRedirectUri => "http://127.0.0.1:54179/callback/";
     public Task<string?> PickJsonAsync() => throw new NotSupportedException("Use the browser import button.");
     public Task ExportAsync(string filename, string json) => js.InvokeVoidAsync("previewDownload",filename,json).AsTask();
-    public Task<string?> ReadQrAsync(bool camera) => throw new NotSupportedException("Use the native app for QR image import or camera capture.");
+    public Task<string?> ReadQrAsync(bool camera) => throw new NotSupportedException("QR import is available in the Android app.");
     public Task<Uri> AuthenticateAsync(Uri uri, CancellationToken cancellationToken = default) => throw new NotSupportedException("Google sign-in is available in the native app.");
 }
 public sealed class PreviewSecretStore : ISecretStore

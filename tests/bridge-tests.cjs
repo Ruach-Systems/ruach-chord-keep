@@ -177,6 +177,37 @@ function deferred() {
   return { promise, resolve, reject };
 }
 
+test('Google avatar loads with icon fallback and clears on sign-out or unsafe URLs', () => {
+  const host = bridgeContext();
+  host.context.URL = URL;
+  function element(hidden = false) {
+    return { hidden, classList: {
+      add() { this.owner.hidden = true; }, remove() { this.owner.hidden = false; }
+    }, removeAttribute(name) { delete this[name]; } };
+  }
+  const avatar = element(true), icon = element();
+  avatar.classList.owner = avatar; icon.classList.owner = icon;
+  host.context.document.getElementById = id => ({ 'user-avatar': avatar, 'user-icon': icon })[id] || null;
+  const bridge = host.context.NativeBridge;
+  bridge.setAccount({ signedIn: true, avatarUrl: 'https://lh3.googleusercontent.com/avatar' });
+  assert.equal(avatar.src, 'https://lh3.googleusercontent.com/avatar');
+  assert.equal(icon.hidden, false, 'keep fallback while loading');
+  avatar.onload();
+  assert.equal(avatar.hidden, false);
+  assert.equal(icon.hidden, true);
+  avatar.onerror();
+  assert.equal(icon.hidden, false);
+  assert.equal(avatar.hidden, true);
+  bridge.setAccount({ signedIn: false });
+  assert.equal(avatar.src, undefined);
+  assert.equal(avatar.onload, null);
+  for (const url of ['javascript:alert(1)', 'http://lh3.googleusercontent.com/a', 'https://googleusercontent.com.evil.test/a']) {
+    bridge.setAccount({ signedIn: true, avatarUrl: url });
+    assert.equal(avatar.src, undefined);
+    assert.equal(icon.hidden, false);
+  }
+});
+
 test('native save queue serializes concurrent edits and durably writes the newest snapshot', async () => {
   const first = deferred();
   let count = 0;
@@ -353,7 +384,7 @@ test('native import/export waits for device persistence and native QR returns de
   const host = bridgeContext();
   const { NativeBridge, LibraryStorage } = host.context;
   await NativeBridge.initialize(host.reference, {});
-  NativeBridge.configure({ native: true });
+  NativeBridge.configure({ native: true, qrImport: true });
   assert.equal(NativeBridge.isNative, true);
   LibraryStorage.setItem('chord-library-songs', '[]');
   await NativeBridge.exportFile('backup.json', '{"songs":[]}');
@@ -363,4 +394,53 @@ test('native import/export waits for device persistence and native QR returns de
   assert.deepEqual(host.calls.map(call => call.method),
     ['SaveStorage', 'ExportFile', 'PreviewImport', 'ScanQr', 'PickQrImage']);
   assert.deepEqual(host.calls[1].args, ['backup.json', '{"songs":[]}']);
+});
+
+test('QR import is hidden and cannot open a scanner on desktop or browser preview', async () => {
+  const host = bridgeContext();
+  let hidden = true;
+  host.context.document.getElementById = id => id === 'btn-scan-qr'
+    ? { classList: { toggle(name, value) { assert.equal(name, 'hidden'); hidden = value; } } } : null;
+  const bridge = host.context.NativeBridge;
+  await bridge.initialize(host.reference, {});
+  for (const configuration of [{ native: true }, { native: true, qrImport: false }, { native: false, qrImport: true }]) {
+    bridge.configure(configuration);
+    assert.equal(hidden, true);
+    assert.equal(bridge.supportsQrImport, false);
+    assert.equal(await bridge.scanQr(), null);
+    assert.equal(await bridge.pickQrImage(), null);
+  }
+  assert.equal(host.calls.length, 0);
+  bridge.configure({ native: true, qrImport: true });
+  assert.equal(hidden, false);
+  assert.equal(bridge.supportsQrImport, true);
+  await bridge.scanQr();
+  await bridge.pickQrImage();
+  assert.deepEqual(host.calls.map(call => call.method), ['ScanQr', 'PickQrImage']);
+});
+
+test('mobile QR results load a song draft; cancellation and invalid QR do not change it', async () => {
+  const music = musicContext();
+  const drafts = [], notices = [];
+  let payload = JSON.stringify({ t: 'cl-song', v: 1, n: 'From phone', a: 'Artist', c: 'C G Am F' });
+  const context = vm.createContext({
+    NativeBridge: { supportsQrImport: true, isNative: true, scanQr: async () => payload },
+    extractSongFromParsedData: music.extractSongFromParsedData,
+    populateSongForm: song => drafts.push(song),
+    showToast: (message, type) => notices.push({ message, type })
+  });
+  vm.runInContext(sourceFunction('handleScannedSongQr') + '\n' + sourceFunction('startQrScan'), context);
+  await context.startQrScan();
+  assert.equal(drafts[0].title, 'From phone');
+  assert.equal(drafts[0].content, 'C G Am F');
+  payload = null;
+  await context.startQrScan();
+  assert.equal(drafts.length, 1);
+  payload = 'https://example.org/unrelated';
+  await context.startQrScan();
+  assert.equal(drafts.length, 1);
+  assert.equal(notices.at(-1).type, 'error');
+  context.NativeBridge.scanQr = async () => { throw new Error('Camera unavailable'); };
+  await context.startQrScan();
+  assert.match(notices.at(-1).message, /Unable to scan QR code: Camera unavailable/);
 });

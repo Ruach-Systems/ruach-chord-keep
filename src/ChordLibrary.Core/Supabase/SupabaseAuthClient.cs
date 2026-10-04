@@ -310,7 +310,10 @@ public sealed class SupabaseAuthClient
     private static SupabaseUser? ParseUser(JsonNode? user)
     {
         var id = user?["id"]?.GetValue<string>();
-        return Guid.TryParse(id, out _) ? new SupabaseUser(id!, user?["email"]?.GetValue<string>()) : null;
+        var metadata = user?["user_metadata"] as JsonObject;
+        string? Text(string key) => metadata?[key] is JsonValue value && value.TryGetValue<string>(out var text) ? text : null;
+        return Guid.TryParse(id, out _) ? new SupabaseUser(id!, user?["email"]?.GetValue<string>(),
+            Text("full_name") ?? Text("name"), Text("avatar_url") ?? Text("picture")) : null;
     }
 
     private static Dictionary<string, string> ParseQuery(string query) => query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries)

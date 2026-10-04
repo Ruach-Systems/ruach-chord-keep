@@ -35,12 +35,33 @@ public sealed class SupabaseDataClient(SupabaseOptions options, HttpClient http,
             foreach (var row in rows)
             {
                 var document = ParseDocument(row);
+                if (document.Collection != collection) throw new InvalidOperationException("Supabase returned an unexpected library collection.");
                 if (document.Revision <= cursor) throw new InvalidOperationException("Supabase returned an invalid sync revision order.");
                 cursor = document.Revision;
                 yield return document;
             }
             // Continue to an empty page even when the server's configured row cap is below 500.
         }
+    }
+
+    public async Task<RemoteDocument?> GetAsync(string collection, string id, CancellationToken cancellationToken = default,
+        string? expectedOwner = null)
+    {
+        ValidateCollection(collection);
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+        var session = await auth.GetSessionAsync(cancellationToken).ConfigureAwait(false);
+        EnsureExpectedOwner(session, expectedOwner);
+        var owner = session.User.Id;
+        var path = "rest/v1/library_documents?select=collection,id,payload,deleted,revision,server_updated_at&owner_id=eq."
+            + Uri.EscapeDataString(owner) + "&collection=eq." + collection + "&id=eq." + Uri.EscapeDataString(id) + "&limit=1";
+        var response = await SupabaseHttp.SendAsync(http, options, HttpMethod.Get, path, null, session.AccessToken, cancellationToken).ConfigureAwait(false);
+        EnsureAccount(owner);
+        var rows = response as JsonArray ?? throw new InvalidOperationException("Supabase returned an invalid library response.");
+        if (rows.Count == 0) return null;
+        var document = ParseDocument(rows[0]);
+        if (rows.Count != 1 || document.Collection != collection || document.Id != id)
+            throw new InvalidOperationException("Supabase returned an unexpected library record.");
+        return document;
     }
 
     public async Task<ApplyResult> ApplyAsync(string collection, string id, JsonObject payload, bool deleted,
@@ -64,7 +85,10 @@ public sealed class SupabaseDataClient(SupabaseOptions options, HttpClient http,
             body, session.AccessToken, cancellationToken).ConfigureAwait(false);
         EnsureAccount(owner);
         var result = data as JsonObject ?? throw new InvalidOperationException("Supabase returned an invalid save response.");
-        return new ApplyResult(result["applied"]!.GetValue<bool>(), ParseDocument(result["document"]));
+        var document = ParseDocument(result["document"]);
+        if (document.Collection != collection || document.Id != id)
+            throw new InvalidOperationException("Supabase returned an unexpected library record.");
+        return new ApplyResult(result["applied"]!.GetValue<bool>(), document);
     }
 
     private void EnsureAccount(string owner)

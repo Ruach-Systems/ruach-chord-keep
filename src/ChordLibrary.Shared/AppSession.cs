@@ -23,6 +23,8 @@ public sealed class AppSession(IAppPlatform platform, ISecretStore secrets, Http
     public LibrarySyncCoordinator? Sync { get; private set; }
     public bool SignedIn => Auth?.User is not null;
     public string? Email => Auth?.User?.Email ?? accountEmail;
+    public string? DisplayName => Auth?.User?.DisplayName;
+    public string? AvatarUrl => Auth?.User?.AvatarUrl;
     private bool initialized;
     private string ConfigPath => Path.Combine(platform.DataDirectory, "supabase-public.json");
     public async Task InitializeAsync()

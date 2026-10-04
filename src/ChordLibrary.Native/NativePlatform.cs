@@ -39,21 +39,54 @@ public sealed class NativePlatform : IAppPlatform
         var path = Path.Combine(folder, name); await File.WriteAllTextAsync(path, json, Encoding.UTF8);
         await MainThread.InvokeOnMainThreadAsync(() => Share.Default.RequestAsync(new ShareFileRequest("Export Chord Library", new ShareFile(path, "application/json"))));
     }
+    public bool SupportsQrImport => DeviceInfo.Platform == DevicePlatform.Android;
+    private readonly SemaphoreSlim qrOperation = new(1, 1);
+
     public async Task<string?> ReadQrAsync(bool camera)
     {
-        FileResult? file;
-        if (camera) {
-            if (!MediaPicker.Default.IsCaptureSupported) throw new InvalidOperationException("Camera capture is unavailable here. Choose a QR image instead.");
-            if (await MainThread.InvokeOnMainThreadAsync(() => Permissions.RequestAsync<Permissions.Camera>()) != PermissionStatus.Granted) throw new InvalidOperationException("Camera permission was not granted. You can import a QR image instead.");
-            file = await MainThread.InvokeOnMainThreadAsync(() => MediaPicker.Default.CapturePhotoAsync(new MediaPickerOptions { Title = "Photograph the song QR code" }));
-        } else file = await MainThread.InvokeOnMainThreadAsync(() => FilePicker.Default.PickAsync(new PickOptions { PickerTitle = "Choose song QR image", FileTypes = FilePickerFileType.Images }));
+        if (!SupportsQrImport) throw new NotSupportedException("QR import is available on Android.");
+        if (!await qrOperation.WaitAsync(0)) return null;
+        try
+        {
+#if ANDROID
+            if (camera) return await MainThread.InvokeOnMainThreadAsync(async () =>
+            {
+                var root = Application.Current?.Windows.FirstOrDefault()?.Page
+                    ?? throw new InvalidOperationException("The scanner cannot open yet. Try again.");
+                var scanner = new QrScannerPage(PickQrImageAsync);
+                await root.Navigation.PushModalAsync(scanner);
+                return await scanner.Result;
+            });
+#endif
+            return await PickQrImageAsync();
+        }
+        finally { qrOperation.Release(); }
+    }
+
+    private static async Task<string?> PickQrImageAsync()
+    {
+        var file = await MainThread.InvokeOnMainThreadAsync(() => FilePicker.Default.PickAsync(
+            new PickOptions { PickerTitle = "Choose song QR image", FileTypes = FilePickerFileType.Images }));
         if (file is null) return null;
-        await using var stream = await file.OpenReadAsync();
-        using var codec = SKCodec.Create(stream) ?? throw new InvalidOperationException("The selected image could not be opened.");
-        if ((long)codec.Info.Width * codec.Info.Height > 40_000_000) throw new InvalidOperationException("Use a smaller QR image (under 40 megapixels).");
-        using var bitmap = SKBitmap.Decode(codec);
-        var reader = new ZXing.SkiaSharp.BarcodeReader { AutoRotate = true, Options = new ZXing.Common.DecodingOptions { TryHarder = true, PossibleFormats = [ZXing.BarcodeFormat.QR_CODE] } };
-        return reader.Decode(bitmap)?.Text ?? throw new InvalidOperationException("No QR code was found. Choose a clear image showing the whole code.");
+        // Decode away from the UI thread, including images supplied by cloud file providers.
+        return await Task.Run(async () =>
+        {
+            await using var stream = await file.OpenReadAsync();
+            using var codec = SKCodec.Create(stream) ?? throw new InvalidOperationException("The selected image could not be opened.");
+            if ((long)codec.Info.Width * codec.Info.Height > 40_000_000)
+                throw new InvalidOperationException("Use a smaller QR image (under 40 megapixels).");
+            using var bitmap = SKBitmap.Decode(codec) ?? throw new InvalidOperationException("The selected image could not be read.");
+            var reader = new ZXing.SkiaSharp.BarcodeReader
+            {
+                AutoRotate = true,
+                Options = new ZXing.Common.DecodingOptions
+                {
+                    TryHarder = true, TryInverted = true, PossibleFormats = [ZXing.BarcodeFormat.QR_CODE]
+                }
+            };
+            return reader.Decode(bitmap)?.Text
+                ?? throw new InvalidOperationException("No QR code was found. Choose a clear image showing the whole code.");
+        });
     }
     public async Task<Uri> AuthenticateAsync(Uri authorizationUri, CancellationToken cancellationToken = default)
     {

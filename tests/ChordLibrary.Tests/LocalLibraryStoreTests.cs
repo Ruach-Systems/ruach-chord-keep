@@ -3,7 +3,7 @@ using ChordLibrary.Core;
 
 namespace ChordLibrary.Tests;
 
-public sealed class LocalLibraryStoreTests : IDisposable
+public sealed partial class LocalLibraryStoreTests : IDisposable
 {
     private readonly string _directory = Path.Combine(Path.GetTempPath(), "chordlibrary-tests-" + Guid.NewGuid().ToString("N"));
     private LocalLibraryStore Store => new(_directory);

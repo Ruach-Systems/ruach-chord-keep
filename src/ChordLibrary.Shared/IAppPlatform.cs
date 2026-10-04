@@ -4,6 +4,7 @@ public interface IAppPlatform
 {
     string DataDirectory { get; }
     bool IsNative { get; }
+    bool SupportsQrImport => false;
     string OAuthRedirectUri { get; }
     Task<string?> PickJsonAsync();
     Task ExportAsync(string filename, string json);

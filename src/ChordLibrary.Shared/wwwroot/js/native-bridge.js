@@ -16,6 +16,8 @@
   let account = { signedIn: false, status: 'offline', email: '', displayName: '' };
   let dropdownInitialized = false;
   let nativePlatform = false;
+  let qrImportSupported = false;
+  let avatarSource = '';
   let appLifecycle = null;
 
   function requireBridge() {
@@ -46,6 +48,34 @@
     const signOut = byId('btn-sign-out');
     const button = byId('user-btn');
     const indicator = byId('sync-indicator');
+    const avatar = byId('user-avatar');
+    const icon = byId('user-icon');
+    let nextAvatar = '';
+    if (account.signedIn && account.avatarUrl) {
+      try {
+        const url = new URL(account.avatarUrl);
+        if (url.protocol === 'https:' && !url.username && !url.password &&
+          (url.hostname === 'googleusercontent.com' || url.hostname.endsWith('.googleusercontent.com')))
+          nextAvatar = url.href;
+      } catch { /* Missing or malformed profile photos use the default icon. */ }
+    }
+    if (avatar && icon && nextAvatar !== avatarSource) {
+      avatarSource = nextAvatar;
+      avatar.onload = avatar.onerror = null;
+      avatar.classList.add('hidden');
+      icon.classList.remove('hidden');
+      if (nextAvatar) {
+        avatar.onload = () => {
+          avatar.classList.remove('hidden');
+          icon.classList.add('hidden');
+        };
+        avatar.onerror = () => {
+          avatar.classList.add('hidden');
+          icon.classList.remove('hidden');
+        };
+        avatar.src = nextAvatar;
+      } else avatar.removeAttribute('src');
+    }
     if (name) name.textContent = account.signedIn ? (account.displayName || 'Your account') : 'Local library';
     if (email) email.textContent = account.email || '';
     if (signIn) {
@@ -183,8 +213,13 @@
 
   window.LibraryStorage = storage;
   window.NativeBridge = {
-    configure(options) { nativePlatform = options?.native === true; },
+    configure(options) {
+      nativePlatform = options?.native === true;
+      qrImportSupported = nativePlatform && options?.qrImport === true;
+      document.getElementById('btn-scan-qr')?.classList.toggle('hidden', !qrImportSupported);
+    },
     get isNative() { return nativePlatform; },
+    get supportsQrImport() { return qrImportSupported; },
     async initialize(reference, initialSnapshot) {
       dotNet = reference;
       values = Object.assign(Object.create(null), initialSnapshot ||
@@ -218,9 +253,11 @@
       return await requireBridge().invokeMethodAsync('PickSongFile');
     },
     async scanQr() {
+      if (!qrImportSupported) return null;
       return await requireBridge().invokeMethodAsync('ScanQr');
     },
     async pickQrImage() {
+      if (!qrImportSupported) return null;
       return await requireBridge().invokeMethodAsync('PickQrImage');
     }
   };
