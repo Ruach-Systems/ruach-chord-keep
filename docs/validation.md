@@ -1,5 +1,13 @@
 # Validation
 
+## Android QR scanner cleanup fix — October 6, 2026
+
+- Investigated the reported app exit immediately after recognizing a QR code. The scanner disconnected its handler before removing the preview from the layout. The pinned ZXing handler disposes Android's native `PreviewView` during disconnection, leaving a disposed view attached during removal. Camera cleanup also ran outside the completion method's exception handler and could escape an `async void` scan callback.
+- Changed cleanup to stop detection, detach the preview, then disconnect the captured handler. Each cleanup operation is protected independently so an error cannot prevent the remaining release steps or discard a recognized result. Removed the unnecessary torch write during shutdown, protected scanner completion, and replaced asynchronous event lambdas with bounded task methods. Release logs use the `ChordLibrary.QR` tag and do not contain QR payloads.
+- Added a platform-neutral native-page test project using the actual scanner source and real MAUI controls with a simulated native handler. All seven Release tests passed: detach-before-release, detection/disconnection failures, duplicate completion, cancellation, background cleanup and image-picker result return after a camera-release failure. The same tests against the previous source fail five cases, including the disposal order and escaped cleanup exceptions. `scripts/verify.ps1` now includes this suite.
+- Published a local Android Release test APK, version `1.0.3` / build `4`, with no build warnings/errors. File: `artifacts/release/1.0.3/android/ChordLibrary-1.0.3-android.apk` (41,243,866 bytes; SHA-256 `21df2ff25fd19a16eba94f0bff39081e4497d66ab05e25de62466435b6a680dc`). APK v2/v3 signatures passed verification; the certificate SHA-256 `95831c04603c22a2ff37b9873949c9b3f973213ba6bb25f6ae4e4691df223fb8` matches the earlier release. Manifest checks confirm app ID `com.louiejeg.chordlibrary`, minimum API 24, target API 36, ARM64/x64 support and no debuggable flag. The user requested a phone-accessible download; draft 1.0.3 is prepared with [Android test release notes](release-1.0.3.md).
+- No Android device is connected. These tests establish cleanup behavior, not physical camera or phone crash confirmation. The user still needs to install the patched APK and test recognition, repeated scanner use, cancellation, background/resume and QR image selection on the affected phone.
+
 ## Draft 1.0.2 packages — October 6, 2026
 
 - Created [unpublished draft 1.0.2](https://github.com/Ruach-Systems/ruach-chord-library/releases), release ID `404082300`, from tag `v1.0.2` / source `56c386e447e2f5e5950d9eaeb953b955e7274743`. Android build number 3; Windows x64 installer unsigned as requested.

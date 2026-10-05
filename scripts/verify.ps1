@@ -2,7 +2,7 @@ $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $PSScriptRoot
 Push-Location $repo
 try {
-    foreach ($project in @('tests/ChordLibrary.Tests/ChordLibrary.Tests.csproj','tests/ChordLibrary.Shared.Tests/ChordLibrary.Shared.Tests.csproj','supabase/tests/ChordLibrary.Supabase.Tests.csproj')) {
+    foreach ($project in @('tests/ChordLibrary.Tests/ChordLibrary.Tests.csproj','tests/ChordLibrary.Shared.Tests/ChordLibrary.Shared.Tests.csproj','tests/ChordLibrary.Native.Tests/ChordLibrary.Native.Tests.csproj','supabase/tests/ChordLibrary.Supabase.Tests.csproj')) {
         & dotnet test $project --nologo -v minimal
         if ($LASTEXITCODE -ne 0) { throw "Tests failed: $project" }
     }

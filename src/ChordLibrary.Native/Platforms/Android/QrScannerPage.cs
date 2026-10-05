@@ -25,8 +25,8 @@ public sealed class QrScannerPage : ContentPage
         SafeAreaEdges = new SafeAreaEdges(SafeAreaRegions.Container);
         BackgroundColor = Color.FromArgb("#18223D");
         var close = new Button { Text = "Cancel", TextColor = Colors.White, BackgroundColor = Color.FromArgb("#272C49") };
-        close.Clicked += async (_, _) => await FinishAsync(null);
-        imageButton.Clicked += async (_, _) => await ChooseImageAsync();
+        close.Clicked += (_, _) => _ = FinishAsync(null);
+        imageButton.Clicked += (_, _) => _ = ChooseImageAsync();
         var layout = new Grid
         {
             Padding = new Thickness(20), RowSpacing = 12,
@@ -109,8 +109,9 @@ public sealed class QrScannerPage : ContentPage
             preview.Children.Add(camera);
             status.Text = "Point the camera at the whole QR code. It scans automatically. You can also choose an image below.";
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            LogCameraError("start", ex);
             StopCamera();
             status.Text = "The camera could not start. You can still choose a QR image below.";
         }
@@ -121,11 +122,11 @@ public sealed class QrScannerPage : ContentPage
     {
         var text = e.Results.FirstOrDefault(result => !string.IsNullOrWhiteSpace(result.Value))?.Value;
         if (text is null) return;
-        MainThread.BeginInvokeOnMainThread(async () =>
+        MainThread.BeginInvokeOnMainThread(() =>
         {
             // Ignore frames queued before a picker, close, or background transition.
             if (!finished && !picking && visible && !suspended && ReferenceEquals(sender, camera))
-                await FinishAsync(text);
+                _ = FinishAsync(text);
         });
     }
 
@@ -134,10 +135,10 @@ public sealed class QrScannerPage : ContentPage
         if (finished || picking) return;
         picking = true;
         imageButton.IsEnabled = false;
-        StopCamera();
         string? error = null;
         try
         {
+            StopCamera();
             var text = await pickImage();
             if (!finished && text is not null) await FinishAsync(text);
         }
@@ -159,24 +160,46 @@ public sealed class QrScannerPage : ContentPage
         var previous = camera;
         camera = null;
         if (previous is null) return;
-        previous.IsDetecting = false;
-        previous.IsTorchOn = false;
         previous.BarcodesDetected -= BarcodesDetected;
-        // Disabling detection alone leaves the camera running; disconnect releases CameraX.
-        previous.Handler?.DisconnectHandler();
-        preview.Children.Remove(previous);
+        // ZXing disposes the native PreviewView in DisconnectHandler. Detach it first:
+        // removing a disposed, still-parented Android view can throw during the UI transition.
+        var handler = previous.Handler;
+        TryCameraCleanup("disable detection", () => previous.IsDetecting = false);
+        TryCameraCleanup("detach preview", () => preview.Children.Remove(previous));
+        // Detection alone leaves CameraX running. Release it even if another cleanup step fails.
+        TryCameraCleanup("release camera", () => handler?.DisconnectHandler());
     }
 
     private async Task FinishAsync(string? text)
     {
         if (finished) return;
         finished = true;
-        StopCamera();
         try
         {
+            StopCamera();
             if (Navigation.ModalStack.LastOrDefault() == this) await Navigation.PopModalAsync();
             completion.TrySetResult(text);
         }
-        catch (Exception ex) { completion.TrySetException(ex); }
+        catch (Exception ex)
+        {
+            LogCameraError("close scanner", ex);
+            completion.TrySetException(new InvalidOperationException("The scanner could not close. Please try again.", ex));
+        }
+    }
+
+    private static void TryCameraCleanup(string operation, Action cleanup)
+    {
+        try { cleanup(); }
+        catch (Exception ex) { LogCameraError(operation, ex); }
+    }
+
+    private static void LogCameraError(string operation, Exception error)
+    {
+        // Keep diagnostics in release builds; never log the scanned song or QR payload.
+#if ANDROID
+        Android.Util.Log.Warn("ChordLibrary.QR", $"{operation}: {error}");
+#else
+        System.Diagnostics.Trace.TraceWarning($"QR scanner {operation}: {error}");
+#endif
     }
 }

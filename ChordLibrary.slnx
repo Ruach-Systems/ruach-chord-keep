@@ -10,6 +10,7 @@
     <Project Path="supabase/tests/ChordLibrary.Supabase.Tests.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/ChordLibrary.Native.Tests/ChordLibrary.Native.Tests.csproj" />
     <Project Path="tests/ChordLibrary.Shared.Tests/ChordLibrary.Shared.Tests.csproj" />
     <Project Path="tests/ChordLibrary.Tests/ChordLibrary.Tests.csproj" />
   </Folder>
