@@ -2,7 +2,7 @@
 
 ## Draft 1.0.2 packages — October 6, 2026
 
-- Created [unpublished draft 1.0.2](https://github.com/Ruach-Systems/ruach-chord-library/releases/tag/untagged-133563a9866551457e81), release ID `404082300`, from tag `v1.0.2` / source `56c386e447e2f5e5950d9eaeb953b955e7274743`. Android build number 3; Windows x64 installer unsigned as requested.
+- Created [unpublished draft 1.0.2](https://github.com/Ruach-Systems/ruach-chord-library/releases), release ID `404082300`, from tag `v1.0.2` / source `56c386e447e2f5e5950d9eaeb953b955e7274743`. Android build number 3; Windows x64 installer unsigned as requested.
 - GitHub reported a [hosted-runner incident](https://www.githubstatus.com/incidents/3q1yb5m7ltvb). Canceled the queued packaging run `37370505860` and used the repository's local release scripts. At draft creation, verification run `37370505201` was still queued; no passing hosted CI result is claimed.
 - All 55 Core, 58 Supabase, 18 shared-session and 21 JavaScript tests passed locally. Windows installation, installed-file checks and uninstall passed using an isolated temporary destination. The existing portable app was not replaced.
 - The Android publish completed; the verification batch command encountered an invalid pre-existing `JAVA_HOME`. Recovered verification using installed Java 21 with a process-scoped override, restored the previous setting, then copied the verified signed APK. Its version name/code are `1.0.2` / `3`; certificate SHA-256 `95831c04603c22a2ff37b9873949c9b3f973213ba6bb25f6ae4e4691df223fb8` matches downloaded release 1.0.1.
