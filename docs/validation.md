@@ -1,5 +1,12 @@
 # Validation
 
+## Automated draft 1.0.5 — October 6, 2026
+
+- [Release packages run 37377033320](https://github.com/Ruach-Systems/ruach-chord-library/actions/runs/37377033320) succeeded and created an unpublished draft with the Windows x64 installer and signed Android APK. Tag `v1.0.5` points to source `aa69a6e4a755a8b5e5aaa9dda6018f6feedfdd7a`; Android build number is 6. The previous 1.0.3/1.0.4 Android fixes are included for both platforms where applicable.
+- All 142 .NET tests and 23 JavaScript checks passed. Windows and Android validation builds reported zero warnings/errors. Hosted Windows installation, installed-file checks and uninstall passed; Android v2/v3 signature verification passed.
+- Downloaded all five uploaded assets and verified checksums and GitHub digests, source/version/build metadata, unsigned Windows product version, APK manifest and matching release certificate. Bundled APK UI scripts and CSS match tagged source after CRLF normalization. See [1.0.5 release notes](release-1.0.5.md) for package hashes and installation instructions.
+- No database migration or public/store publication was performed. Physical Android Back/gesture and QR scanning, Google sign-in, import and two-device synchronization remain device acceptance checks.
+
 ## Android Back navigation — October 6, 2026
 
 - The library is rendered inside a single native page, so Android's default navigation did not traverse its song/setlist views. Added a MAUI Android lifecycle Back handler, a registered shared UI callback and JavaScript view history. The pinned [MAUI 10.0.20 activity implementation](https://github.com/dotnet/maui/blob/10.0.20/src/Core/src/Platform/Android/MauiAppCompatActivity.Lifecycle.cs) routes hardware Back and Android 13+ Back gestures through this lifecycle event.
