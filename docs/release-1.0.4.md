@@ -14,6 +14,10 @@ Android build number: 5. This draft contains an Android APK only and includes th
 
 All 22 shared-session/navigation tests and 23 Node regression checks passed. All 17 real browser DOM checks passed at 414px and 1280px widths, covering navigation, scroll restoration, menus, drawers, dirty forms, inline edits, deleted history, account reset and status-dot appearance alongside sync behavior. Android Debug and Windows Release builds passed. Physical Android Back button/gesture and native dialog behavior still require testing on the affected phone.
 
+The Android Release publish and APK v2/v3 signature verification passed with the existing release certificate. Manifest checks confirm version 1.0.4/build 5, app ID `com.louiejeg.chordlibrary`, minimum API 24, target API 36, ARM64/x64 support and no debuggable flag. Bundled app/bridge scripts and stylesheet match the working files exactly and committed source after CRLF normalization. Source: `f19e143bf66899adeece172f54f7b75b12c16e04`, tag `v1.0.4`. This is a locally built package, not a passing hosted CI result.
+
+APK: 41,604,255 bytes. SHA-256: `0a4442a99bbdd14dd0b0c5b47b034e8fdd1c4e533d12e234ccfee24ebeee3f10`.
+
 Download `ChordLibrary-1.0.4-android.apk` from the draft assets and install it over the previous release APK. Do not uninstall the existing app. Test Back from a song, a setlist song, the drawer, Account & sync, import preview, a form with unsaved changes and the native QR scanner. At the homepage, Back should minimize the app.
 
 The repository is private. Sign into an account with draft-release access on your phone to download the APK. This remains an unpublished draft for phone validation; no passing hosted CI or physical-device result is claimed.
