@@ -1,5 +1,22 @@
 # Validation
 
+## Incremental UI reconciliation — October 6, 2026
+
+- Snapshot differences select only affected collections and views. Keyed list reconciliation retains song/setlist/home-row DOM identity, including repeated songs in a setlist, and patches changed attributes/text. Current-song chord content is patched without replacing its whole container; unrelated changes never render that sheet.
+- Scroll anchors and keyboard focus survive inserts and re-sorting, including the `insertBefore` fallback for WebViews without `moveBefore`. A focused deleted row transfers focus to a neighbor (or the empty list). Preferences refresh only when their stored values actually change. Active drags defer snapshot delivery, alongside existing editor/modal/undo guards. Screen-reader sync announcements use a separate polite status region; retained rows do not replay entrance animations.
+- All 21 Node regression checks and all 18 shared-session tests passed. All 11 DOM checks passed at both 1280px and 414px widths, including the older-WebView movement fallback and preservation of chord whitespace. The browser fixture runs the shipped markup/scripts with synthetic offline data, checking zero no-change content mutations, untouched-row mutations/identity, inserts/sorts, search, focus/scroll, chord selection/content, duplicate rows, navigation, drag deferral, deletions and account resets.
+- Reproduce DOM checks by serving the repository root and opening `tests/ui-sync.html`; use both the desktop and mobile buttons. This fixture never signs in or accesses Supabase. Responsive browser checks do not establish physical Android WebView or two-device cloud behavior.
+- Windows Release and Android Debug builds passed with zero warnings/errors. `git diff --check` passed and no unmerged paths were found.
+- These changes are local; the existing 1.0.1 draft assets have not been regenerated.
+
+## Unchanged sync keeps the displayed page — October 5, 2026
+
+- Ordinary snapshot delivery now compares the saved library with the view's existing baseline. Empty syncs, upload acknowledgments, downloads of our own unchanged edits, and changes only to server revisions do not call the JavaScript snapshot replacement that redraws the homepage. Comparison ignores JSON whitespace, property order and normalization of legacy defaults.
+- Sync revisions still advance, and changes downloaded while the UI was busy remain deliverable on a later sync even if that later download is empty. Failed UI delivery retains the prior baseline for retry. Account sign-in/sign-out continue to force their required UI reset.
+- All 18 shared-session regression checks passed, including six new checks for no-change intervals, upload echoes, deferred updates, unchanged payloads with newer revisions, failed delivery retries and forced resets.
+- Windows Release and Android Debug builds passed with zero warnings/errors. `git diff --check` passed and no unmerged paths were found.
+- The existing 1.0.1 draft release predates this fix. Device runtime behavior has not been tested with this change.
+
 ## Mobile drawer and Google account photo — October 4, 2026
 
 - The mobile drawer and its backdrop now sit inside `.app-main`, below the header in normal layout. Native CSS overrides the original fixed viewport offset; desktop keeps its existing persistent drawer. A browser fixture using the shipped HTML/CSS verified a 360px mobile viewport with a 28px safe area and 72px header: header bottom, drawer top, and tab top were all 100px. At 1024px, the drawer also began at 100px and remained 280px wide. This is browser layout evidence, not an Android screenshot.

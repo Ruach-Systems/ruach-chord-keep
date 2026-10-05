@@ -588,17 +588,17 @@
       : `${songs.length} ${songs.length === 1 ? 'song' : 'songs'}`;
 
     if (filtered.length === 0) {
-      dom.songList.innerHTML = `
+      LibraryView.patchList(dom.songList, `
         <li class="drawer-empty-state">
           ${getHomeItemIcon('song')}
           <strong>${query ? 'No matching songs' : 'Your song library is empty'}</strong>
           <span>${query ? 'Try a different title, artist, or lyric.' : 'Use New to add your first song.'}</span>
         </li>
-      `;
+      `);
       return;
     }
 
-    dom.songList.innerHTML = filtered.map((song, i) => `
+    LibraryView.patchList(dom.songList, filtered.map((song, i) => `
       <li style="animation-delay:${Math.min(i * 30, 300)}ms">
         <button class="song-item ${song.id === selectedSongId ? 'active' : ''}" type="button" data-id="${escapeHtml(String(song.id))}"
           ${song.id === selectedSongId ? 'aria-current="true"' : ''}>
@@ -615,7 +615,7 @@
           </svg>
         </button>
       </li>
-    `).join('');
+    `).join(''));
   }
 
   function renderSetlistList() {
@@ -635,17 +635,17 @@
       : `${setlists.length} ${setlists.length === 1 ? 'setlist' : 'setlists'}`;
 
     if (filtered.length === 0) {
-      dom.setlistList.innerHTML = `
+      LibraryView.patchList(dom.setlistList, `
         <li class="drawer-empty-state">
           ${getHomeItemIcon('setlist')}
           <strong>${query ? 'No matching setlists' : 'No setlists yet'}</strong>
           <span>${query ? 'Try a different setlist name or description.' : 'Use New to build your first setlist.'}</span>
         </li>
-      `;
+      `);
       return;
     }
 
-    dom.setlistList.innerHTML = filtered.map((setlist, i) => {
+    LibraryView.patchList(dom.setlistList, filtered.map((setlist, i) => {
       const isActive = setlist.id === selectedSetlistId && viewingSetlistSongIndex === -1;
       return `
       <li style="animation-delay:${Math.min(i * 30, 300)}ms">
@@ -666,7 +666,7 @@
         </button>
       </li>
     `;
-    }).join('');
+    }).join(''));
   }
 
   function formatRelativeUpdate(timestamp) {
@@ -734,7 +734,7 @@
     $('home-recent-songs').style.display = recentSongs.length ? '' : 'none';
     $('home-recent-setlists').style.display = recentSetlists.length ? '' : 'none';
 
-    homeSongsList.innerHTML = recentSongs.map((song, i) => `
+    LibraryView.patchList(homeSongsList, recentSongs.map((song, i) => `
       <li style="--home-item-delay:${i * 50}ms">
         <button class="home-recent-item" type="button" data-home-type="song" data-id="${escapeHtml(String(song.id))}">
           <span class="home-item-icon" aria-hidden="true">${getHomeItemIcon('song')}</span>
@@ -750,9 +750,9 @@
           </svg>
         </button>
       </li>
-    `).join('');
+    `).join(''));
 
-    homeSetlistsList.innerHTML = recentSetlists.map((setlist, i) => `
+    LibraryView.patchList(homeSetlistsList, recentSetlists.map((setlist, i) => `
       <li style="--home-item-delay:${i * 50}ms">
         <button class="home-recent-item" type="button" data-home-type="setlist" data-id="${escapeHtml(String(setlist.id))}">
           <span class="home-item-icon" aria-hidden="true">${getHomeItemIcon('setlist')}</span>
@@ -769,7 +769,7 @@
           </svg>
         </button>
       </li>
-    `).join('');
+    `).join(''));
 
     dashboard.onclick = (e) => {
       const viewAll = e.target.closest('.home-view-all');
@@ -817,19 +817,6 @@
     dom.appTitle.textContent = transposedTitle + artistSuffix;
     dom.appTitle.title = transposedTitle + artistSuffix;
 
-    // Show/hide back-to-setlist button
-    const backBtn = document.getElementById('btn-back-setlist');
-    const backLabel = document.getElementById('btn-back-setlist-label');
-    if (selectedSetlistId && viewingSetlistSongIndex >= 0) {
-      const setlist = setlists.find(p => p.id === selectedSetlistId);
-      if (backBtn) {
-        backBtn.classList.remove('hidden');
-        if (backLabel) backLabel.textContent = setlist ? setlist.name : 'Setlist';
-      }
-    } else {
-      if (backBtn) backBtn.classList.add('hidden');
-    }
-
     // Update transpose display
     dom.transposeValue.textContent = transposeSteps;
     dom.transposeValue.className = 'transpose-value';
@@ -875,7 +862,7 @@
     // Transpose and highlight chords
     const transposedContent = transposeText(song.content, transposeSteps);
     if (!isContentEditableEditing) {
-      dom.songContent.innerHTML = highlightChords(transposedContent);
+      LibraryView.patchHtml(dom.songContent, highlightChords(transposedContent));
     }
 
     // Keep inline editing stable when display preferences are changed.
@@ -940,17 +927,17 @@
     dom.setlistReorderHint.classList.toggle('hidden', setlistSongs.length < 2);
 
     if (setlistSongs.length === 0) {
-      dom.setlistSongs.innerHTML = `
+      LibraryView.patchList(dom.setlistSongs, `
         <li class="setlist-empty-state">
           ${getHomeItemIcon('song')}
           <strong>This setlist is ready for songs</strong>
           <span>Choose Add songs to start building your set.</span>
         </li>
-      `;
+      `);
       return;
     }
 
-    dom.setlistSongs.innerHTML = setlistSongs.map((song, index) => `
+    LibraryView.patchList(dom.setlistSongs, setlistSongs.map((song, index) => `
       <li class="setlist-song-item" data-id="${escapeHtml(String(song.id))}" data-index="${index}" style="animation-delay:${index * 40}ms">
         <button class="drag-handle" type="button" aria-label="Drag ${escapeHtml(song.title)} to reorder" title="Drag to reorder">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -977,7 +964,7 @@
           </svg>
         </button>
       </li>
-    `).join('');
+    `).join(''));
 
     setupSetlistDragDrop();
   }
@@ -1080,6 +1067,7 @@
       if (!item) return;
 
       e.preventDefault();
+      list._syncInteraction = true;
       startY = e.clientY;
       const startX = e.clientX;
 
@@ -1101,6 +1089,7 @@
         if (Math.abs(e.clientY - startY) > MOVE_THRESHOLD) {
           clearTimeout(longPressTimer);
           longPressTimer = null;
+          list._syncInteraction = false;
         }
         return;
       }
@@ -1113,6 +1102,7 @@
     });
 
     list.addEventListener('pointerup', (e) => {
+      list._syncInteraction = false;
       clearTimeout(longPressTimer);
       longPressTimer = null;
       if (dragging) {
@@ -1121,6 +1111,7 @@
     });
 
     list.addEventListener('pointercancel', () => {
+      list._syncInteraction = false;
       clearTimeout(longPressTimer);
       longPressTimer = null;
       cancelDrag();
@@ -1166,6 +1157,19 @@
   }
 
   function updateSongNavigation() {
+    // Show/hide back-to-setlist button
+    const backBtn = document.getElementById('btn-back-setlist');
+    const backLabel = document.getElementById('btn-back-setlist-label');
+    if (selectedSetlistId && viewingSetlistSongIndex >= 0) {
+      const setlist = setlists.find(p => p.id === selectedSetlistId);
+      if (backBtn) {
+        backBtn.classList.remove('hidden');
+        if (backLabel) backLabel.textContent = setlist ? setlist.name : 'Setlist';
+      }
+    } else {
+      if (backBtn) backBtn.classList.add('hidden');
+    }
+
     const setlist = setlists.find(p => p.id === selectedSetlistId);
 
     if (!setlist || viewingSetlistSongIndex < 0) {
@@ -3402,8 +3406,61 @@
     return true;
   }
 
+  function applyNativeSnapshot(data) {
+    const songChanges = LibraryView.changes(songs, data.songs);
+    const setlistChanges = LibraryView.changes(setlists, data.setlists);
+    const previousSongId = selectedSongId;
+    const previousSetlistId = selectedSetlistId;
+    if (!data.reset && !data.settingsChanged && !songChanges.changed && !setlistChanges.changed) return;
+
+    LibraryView.preserveView(() => {
+      songs = data.songs;
+      setlists = data.setlists;
+      const selectedSong = songs.find(song => song.id === selectedSongId);
+      const selectedSetlist = setlists.find(setlist => setlist.id === selectedSetlistId);
+      const songRemoved = !!selectedSongId && !selectedSong;
+      const setlistRemoved = !!selectedSetlistId && !selectedSetlist;
+      if (songRemoved) {
+        selectedSongId = null;
+        finishInlineEditState();
+        stopAutoScroll();
+        setSongActionsVisible(false);
+        $('btn-autoscroll').classList.add('hidden');
+        if (!selectedSetlist) $('btn-home').classList.add('hidden');
+      }
+      if (setlistRemoved) selectedSetlistId = null;
+      if (viewingSetlistSongIndex >= 0) {
+        const visibleIds = selectedSetlist?.songIds.filter(id => songs.some(song => song.id === id)) || [];
+        // Preserve the occurrence when a setlist contains a song more than once.
+        if (visibleIds[viewingSetlistSongIndex] !== selectedSongId) viewingSetlistSongIndex = visibleIds.indexOf(selectedSongId);
+        if (viewingSetlistSongIndex < 0) viewingFromSetlistId = null;
+      }
+      if (songChanges.changed || songRemoved || data.reset) renderSongList();
+      if (setlistChanges.changed || songRemoved || setlistRemoved || data.reset) renderSetlistList();
+
+      if (selectedSongId) {
+        // An unrelated library change must never rebuild the open chord sheet.
+        if (songChanges.ids.has(selectedSongId) || setlistRemoved || data.settingsChanged || data.reset) {
+          transposeSteps = typeof selectedSong.transposeSteps === 'number' ? selectedSong.transposeSteps : 0;
+          renderSongDetail();
+        } else if (setlistChanges.ids.has(selectedSetlistId) || songChanges.changed) {
+          updateSongNavigation();
+        }
+      } else if (selectedSetlistId) {
+        const affectedMember = selectedSetlist.songIds.some(id => songChanges.ids.has(id));
+        if (setlistChanges.ids.has(selectedSetlistId) || affectedMember || songRemoved || data.reset) renderSetlistDetail();
+      } else if (previousSongId || previousSetlistId || data.reset) {
+        renderSongDetail();
+      } else if (songChanges.changed || setlistChanges.changed) {
+        renderHomeDashboard();
+      }
+    });
+    const count = songChanges.ids.size + setlistChanges.ids.size;
+    if (count && !data.reset) LibraryView.announceSync(count);
+  }
+
   function canRefreshNativeSnapshot() {
-    if (inlineEditingSongId || undoCleanup) return false;
+    if (inlineEditingSongId || undoCleanup || dom.setlistSongs?._syncInteraction) return false;
     const dialogs = [dom.songModal, dom.setlistModal, dom.addSongsModal, dom.confirmModal,
       dom.shareQrModal, dom.scanQrOverlay, $('preferences-modal'), $('tour-overlay')];
     return !dialogs.some(dialog => dialog && !dialog.classList.contains('hidden'));
@@ -3492,26 +3549,8 @@
     if (typeof SyncService !== 'undefined') {
       SyncService.init();
       SyncService.initDropdown();
-      SyncService.onRemoteUpdate(function(type, data) {
-        if (type !== 'snapshot') return;
-        songs = data.songs;
-        setlists = data.setlists;
-        const selectedSong = songs.find(song => song.id === selectedSongId);
-        transposeSteps = selectedSong && typeof selectedSong.transposeSteps === 'number'
-          ? selectedSong.transposeSteps : 0;
-        if (selectedSongId && !selectedSong) {
-          selectedSongId = null;
-          finishInlineEditState();
-        }
-        if (selectedSetlistId && !setlists.some(setlist => setlist.id === selectedSetlistId)) {
-          selectedSetlistId = null;
-          viewingSetlistSongIndex = -1;
-          viewingFromSetlistId = null;
-        }
-        renderSongList();
-        renderSetlistList();
-        if (selectedSetlistId && !selectedSongId) renderSetlistDetail();
-        else renderSongDetail();
+      SyncService.onRemoteUpdate((type, data) => {
+        if (type === 'snapshot') applyNativeSnapshot(data);
       });
     }
 

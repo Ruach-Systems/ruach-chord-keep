@@ -177,9 +177,11 @@
     // Account changes must call canSwitchAccount before authentication changes.
     // Reset the editor before exposing another account's stored data to the UI.
     if (reset) appLifecycle?.resetForAccount();
+    const settingsChanged = ['chord-library-theme', 'chord-library-notation',
+      'chord-library-font-size', 'chord-library-sidebar-collapsed'].some(key => values[key] !== replacement[key]);
     values = replacement;
-    appLifecycle?.refreshSettings();
-    if (remoteCallback) remoteCallback('snapshot', { songs: nextSongs, setlists: nextSetlists });
+    if (reset || settingsChanged) appLifecycle?.refreshSettings();
+    if (remoteCallback) remoteCallback('snapshot', { songs: nextSongs, setlists: nextSetlists, reset, settingsChanged });
     updateAccountUI();
   }
 

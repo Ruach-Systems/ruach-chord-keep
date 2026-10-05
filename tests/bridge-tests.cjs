@@ -9,6 +9,91 @@ const { test } = require('node:test');
 const scripts = path.join(__dirname, '../src/ChordLibrary.Shared/wwwroot/js');
 const appSource = fs.readFileSync(path.join(scripts, 'app.js'), 'utf8');
 const bridgeSource = fs.readFileSync(path.join(scripts, 'native-bridge.js'), 'utf8');
+const viewSource = fs.readFileSync(path.join(scripts, 'view-updates.js'), 'utf8');
+
+test('all shipped JavaScript parses, including the loader dependency order', () => {
+  for (const file of fs.readdirSync(scripts).filter(file => file.endsWith('.js'))) {
+    new vm.Script(fs.readFileSync(path.join(scripts, file), 'utf8'), { filename: file });
+  }
+  assert.match(fs.readFileSync(path.join(scripts, 'loader.js'), 'utf8'), /'view-updates.js', 'app.js'/);
+});
+
+function viewContext() {
+  const context = vm.createContext({});
+  context.window = context;
+  vm.runInContext(viewSource, context);
+  return context.LibraryView;
+}
+
+test('snapshot differences compare semantic data and preserve membership order', () => {
+  const view = viewContext();
+  const before = [{ id: 'a', title: 'A', extra: { x: 1, y: 2 } }, { id: 'b', title: 'B' }];
+  const same = [{ extra: { y: 2, x: 1 }, title: 'A', id: 'a' }, before[1]];
+  assert.equal(view.changes(before, same).changed, false);
+  const delta = view.changes(before, [{ ...before[0], title: 'Updated' }, { id: 'c', title: 'New' }]);
+  assert.deepEqual(Array.from(delta.ids).sort(), ['a', 'b', 'c']);
+  assert.equal(view.changes(before, before.toReversed()).changed, true);
+  assert.equal(view.equal({ songIds: ['a', 'b', 'a'] }, { songIds: ['a', 'a', 'b'] }), false);
+});
+
+function snapshotContext(songId = null, setlistId = null, index = -1) {
+  const calls = [];
+  const view = viewContext();
+  view.preserveView = callback => callback();
+  view.announceSync = count => calls.push('announce:' + count);
+  const context = vm.createContext({
+    LibraryView: view,
+    $: () => ({ classList: { add() {} } }),
+    ...Object.fromEntries(['renderSongList', 'renderSetlistList', 'renderSongDetail',
+      'renderSetlistDetail', 'renderHomeDashboard', 'updateSongNavigation', 'finishInlineEditState',
+      'stopAutoScroll', 'setSongActionsVisible'].map(name => [name, () => calls.push(name)]))
+  });
+  vm.runInContext('let songs = [], setlists = [], selectedSongId = null, selectedSetlistId = null;\n' +
+    'let viewingSetlistSongIndex = -1, viewingFromSetlistId = null, transposeSteps = 0;\n' +
+    sourceFunction('applyNativeSnapshot') + '\n' +
+    'globalThis.seed = (data, song, setlist, index) => { songs = data.songs; setlists = data.setlists;' +
+    'selectedSongId = song; selectedSetlistId = setlist; viewingSetlistSongIndex = index; };\n' +
+    'globalThis.state = () => ({selectedSongId, selectedSetlistId, viewingSetlistSongIndex, transposeSteps});', context);
+  const data = { songs: [{ id: 'a', title: 'A', content: 'C G' }, { id: 'b', title: 'B', content: 'Dm' }],
+    setlists: [{ id: 'set', name: 'Practice', songIds: ['a', 'b'] }] };
+  context.seed(data, songId, setlistId, index);
+  return { context, calls, data };
+}
+
+test('unchanged snapshots are silent and unrelated changes never redraw the open sheet', () => {
+  const { context, calls, data } = snapshotContext('a');
+  context.applyNativeSnapshot(JSON.parse(JSON.stringify(data)));
+  assert.deepEqual(calls, []);
+  context.applyNativeSnapshot({ ...data, songs: [data.songs[0], { ...data.songs[1], title: 'New title' }] });
+  assert.deepEqual(calls, ['renderSongList', 'updateSongNavigation', 'announce:1']);
+});
+
+test('selected songs update in place while setlist reorders update navigation only', () => {
+  const { context, calls, data } = snapshotContext('b', 'set', 1);
+  context.applyNativeSnapshot({ ...data, setlists: [{ ...data.setlists[0], songIds: ['b', 'a'] }] });
+  assert.equal(context.state().viewingSetlistSongIndex, 0);
+  assert.deepEqual(calls, ['renderSetlistList', 'updateSongNavigation', 'announce:1']);
+  calls.length = 0;
+  context.applyNativeSnapshot({ ...data, songs: [data.songs[0], { ...data.songs[1], content: 'Em', transposeSteps: 2 }] });
+  assert.ok(calls.includes('renderSongDetail'));
+  assert.ok(!calls.includes('stopAutoScroll'));
+  assert.equal(context.state().transposeSteps, 2);
+});
+
+test('setlist members update the open setlist and remote deletions leave a valid view', () => {
+  const { context, calls, data } = snapshotContext(null, 'set');
+  context.applyNativeSnapshot({ ...data, songs: [data.songs[0]] });
+  assert.ok(calls.includes('renderSetlistDetail'));
+  const sheet = snapshotContext('b', 'set', 1);
+  sheet.context.applyNativeSnapshot({ ...sheet.data, songs: [sheet.data.songs[0]] });
+  assert.equal(sheet.context.state().selectedSongId, null);
+  assert.ok(sheet.calls.includes('renderSetlistDetail'));
+  assert.ok(sheet.calls.includes('stopAutoScroll'));
+  const deletedSet = snapshotContext('a', 'set', 0);
+  deletedSet.context.applyNativeSnapshot({ ...deletedSet.data, setlists: [] });
+  assert.equal(deletedSet.context.state().selectedSetlistId, null);
+  assert.ok(deletedSet.calls.includes('renderSongDetail'));
+});
 
 function sourceFunction(name) {
   const match = appSource.match(new RegExp('^  (?:async )?function ' + name + '\\([^]*?^  \\}', 'm'));
@@ -176,6 +261,26 @@ function deferred() {
   const promise = new Promise((yes, no) => { resolve = yes; reject = no; });
   return { promise, resolve, reject };
 }
+
+test('data-only sync preserves preferences and account reset always refreshes them', async () => {
+  const host = bridgeContext();
+  const bridge = host.context.NativeBridge;
+  const settings = { 'chord-library-theme': 'dark', 'chord-library-font-size': '16' };
+  await bridge.initialize(host.reference, settings);
+  let refreshed = 0;
+  const payloads = [];
+  bridge.registerAppLifecycle({ refreshSettings: () => refreshed++, resetForAccount() {} });
+  host.context.SyncService.onRemoteUpdate((_, data) => payloads.push(data));
+  bridge.replaceSnapshot({ ...settings, 'chord-library-songs': '[{"id":"new"}]' });
+  assert.equal(refreshed, 0);
+  assert.equal(payloads.at(-1).settingsChanged, false);
+  bridge.replaceSnapshot({ ...settings, 'chord-library-font-size': '18' });
+  assert.equal(refreshed, 1);
+  assert.equal(payloads.at(-1).settingsChanged, true);
+  bridge.replaceSnapshot({ ...settings, 'chord-library-font-size': '18' }, true);
+  assert.equal(refreshed, 2);
+  assert.equal(payloads.at(-1).reset, true);
+});
 
 test('Google avatar loads with icon fallback and clears on sign-out or unsafe URLs', () => {
   const host = bridgeContext();

@@ -282,6 +282,108 @@ public sealed class AppSessionTests : IDisposable
         return app;
     }
 
+    [Fact]
+    public async Task UnchangedPeriodicSyncDoesNotDeliverUiSnapshots()
+    {
+        var app = await SignedAppAsync();
+        await app.ReadInitialAsync();
+        var deliveries = 0;
+        for (var tick = 0; tick < 3; tick++)
+        {
+            var result = await app.SyncAsync();
+            Assert.Equal(0, result.Pulled);
+            Assert.Equal(0, result.Uploaded);
+            await app.DeliverSnapshotAsync(_ => { deliveries++; return Task.CompletedTask; }, onlyIfChanged: true);
+        }
+        Assert.Equal(0, deliveries);
+    }
+
+    [Fact]
+    public async Task UploadAcknowledgmentAndItsDownloadEchoDoNotRedrawLocalEdits()
+    {
+        var app = await SignedAppAsync();
+        server.Put(Alpha, "songs", Song("a", "First"), 1);
+        await app.SyncAsync();
+        var ui = await app.ReadInitialAsync();
+        var edited = Edit(ui, "a", "Already displayed local edit");
+        // The browser can serialize a legacy record without defaults, with different whitespace
+        // and property order. Normalizing it in the native store is not a new visible cloud edit.
+        var raw = JsonNode.Parse(edited[LibraryStorageKeys.Songs])![0]!.AsObject();
+        raw.Remove("twoColumn");
+        raw.Remove("transposeSteps");
+        var reordered = new JsonObject(raw.Reverse().Select(pair =>
+            new KeyValuePair<string, JsonNode?>(pair.Key, pair.Value?.DeepClone())));
+        edited[LibraryStorageKeys.Songs] = new JsonArray(reordered).ToJsonString(new() { WriteIndented = true });
+        await app.SaveAsync(edited);
+        Assert.Equal(1, (await app.SyncAsync()).Uploaded);
+        var deliveries = 0;
+        await app.DeliverSnapshotAsync(_ => { deliveries++; return Task.CompletedTask; }, onlyIfChanged: true);
+        Assert.Equal(1, (await app.SyncAsync()).Pulled);
+        await app.DeliverSnapshotAsync(_ => { deliveries++; return Task.CompletedTask; }, onlyIfChanged: true);
+        Assert.Equal(0, deliveries);
+    }
+
+    [Fact]
+    public async Task DeferredRemoteUpdateStillArrivesAfterANoChangeSyncAndOnlyOnce()
+    {
+        var app = await SignedAppAsync();
+        await app.ReadInitialAsync();
+        server.Put(Alpha, "songs", Song("a", "Downloaded while editor was busy"), 1);
+        Assert.Equal(1, (await app.SyncAsync()).Pulled);
+        // No delivery occurred because the UI was busy. A subsequent empty download must not
+        // hide the unseen change simply because its sync result reports zero downloaded records.
+        Assert.Equal(0, (await app.SyncAsync()).Pulled);
+        var deliveries = 0;
+        await app.DeliverSnapshotAsync(snapshot =>
+        {
+            deliveries++;
+            Assert.Equal("Downloaded while editor was busy", Title(LibraryDocument.FromSnapshot(snapshot), "a"));
+            return Task.CompletedTask;
+        }, onlyIfChanged: true);
+        await app.SyncAsync();
+        await app.DeliverSnapshotAsync(_ => { deliveries++; return Task.CompletedTask; }, onlyIfChanged: true);
+        Assert.Equal(1, deliveries);
+    }
+
+    [Fact]
+    public async Task SamePayloadWithNewRevisionSkipsRedrawAndKeepsNextEditRevisionCurrent()
+    {
+        var app = await SignedAppAsync();
+        server.Put(Alpha, "songs", Song("a", "Same title"), 1);
+        await app.SyncAsync();
+        var ui = await app.ReadInitialAsync();
+        server.Put(Alpha, "songs", Song("a", "Same title"), 9);
+        Assert.Equal(1, (await app.SyncAsync()).Pulled);
+        await app.DeliverSnapshotAsync(_ => throw new InvalidOperationException("Unchanged UI should not redraw."), onlyIfChanged: true);
+        await app.SaveAsync(Edit(ui, "a", "Next local edit"));
+        Assert.Equal(9, Assert.Single((await app.Store.ReadSyncStateAsync(app.ProfileId)).PendingChanges).ExpectedRevision);
+    }
+
+    [Fact]
+    public async Task FailedConditionalDeliveryRetriesTheUnseenSnapshot()
+    {
+        var app = await SignedAppAsync();
+        await app.ReadInitialAsync();
+        server.Put(Alpha, "songs", Song("a", "New cloud song"), 1);
+        await app.SyncAsync();
+        await Assert.ThrowsAsync<InvalidOperationException>(() => app.DeliverSnapshotAsync(
+            _ => throw new InvalidOperationException("WebView unavailable."), onlyIfChanged: true));
+        await app.SyncAsync();
+        var delivered = false;
+        await app.DeliverSnapshotAsync(_ => { delivered = true; return Task.CompletedTask; }, onlyIfChanged: true);
+        Assert.True(delivered);
+    }
+
+    [Fact]
+    public async Task ForcedResetStillDeliversAnIdenticalSnapshot()
+    {
+        var app = await SignedAppAsync();
+        await app.ReadInitialAsync();
+        var delivered = false;
+        await app.DeliverSnapshotAsync(_ => { delivered = true; return Task.CompletedTask; });
+        Assert.True(delivered);
+    }
+
     private async Task SeedStoredSessionAsync(string project)
     {
         var auth = new SupabaseAuthClient(new SupabaseOptions(project, PublicKey), http, secrets);

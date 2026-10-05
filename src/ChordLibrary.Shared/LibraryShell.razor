@@ -111,7 +111,7 @@
     private async Task Refresh(bool reset = false)
     {
         await JS.InvokeVoidAsync("NativeBridge.flush");
-        await Session.DeliverSnapshotAsync(snapshot => JS.InvokeVoidAsync("NativeBridge.replaceSnapshot", snapshot, reset).AsTask());
+        await Session.DeliverSnapshotAsync(snapshot => JS.InvokeVoidAsync("NativeBridge.replaceSnapshot", snapshot, reset).AsTask(), onlyIfChanged: !reset);
     }
     private Task GoogleSignIn() => Run(async () => {
         if (!await JS.InvokeAsync<bool>("NativeBridge.canSwitchAccount")) return;

@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using ChordLibrary.Core;
 using ChordLibrary.Core.Supabase;
 namespace ChordLibrary.Shared;
@@ -60,16 +61,39 @@ public sealed class AppSession(IAppPlatform platform, ISecretStore secrets, Http
         var store = Store; var profile = ProfileId;
         var state = await store.ReadSyncStateAsync(profile); baseline = new(state.Snapshot); revisions = new(state.RemoteRevisions); baselineStore = store; baselineProfile = profile; return state.Snapshot;
     }
-    public async Task DeliverSnapshotAsync(Func<Dictionary<string,string>,Task> deliver)
+    public async Task DeliverSnapshotAsync(Func<Dictionary<string,string>,Task> deliver, bool onlyIfChanged = false)
     {
         await viewGate.WaitAsync();
         try {
             var store = Store; var profile = ProfileId;
-            var state = await store.ReadSyncStateAsync(profile); await deliver(state.Snapshot);
+            var state = await store.ReadSyncStateAsync(profile);
+            // Upload acknowledgments and downloads of our own writes can advance sync metadata
+            // without changing what the WebView displays. Avoid resetting its DOM and scroll.
+            // Compare the saved view as well as this sync's changes so deferred updates still arrive.
+            var sameView = ReferenceEquals(baselineStore, store) && baselineProfile == profile
+                && SnapshotsEqual(baseline, state.Snapshot);
+            if (!onlyIfChanged || !sameView) await deliver(state.Snapshot);
             baseline = new(state.Snapshot); revisions = new(state.RemoteRevisions); baselineStore = store; baselineProfile = profile;
         }
         finally { viewGate.Release(); }
     }
+    private static bool SnapshotsEqual(IReadOnlyDictionary<string,string> seen, IReadOnlyDictionary<string,string> current)
+    {
+        if (seen.Count == current.Count && seen.All(pair => current.TryGetValue(pair.Key, out var value) && value == pair.Value)) return true;
+        foreach (var key in seen.Keys.Union(current.Keys, StringComparer.Ordinal))
+        {
+            if (key is LibraryStorageKeys.Songs or LibraryStorageKeys.Setlists or LibraryStorageKeys.LegacyPlaylists) continue;
+            if (seen.TryGetValue(key, out var before) != current.TryGetValue(key, out var after) || before != after) return false;
+        }
+        // Ignore JSON formatting, object property order and normalization of legacy defaults.
+        // Array order, record values and settings changes must still be delivered.
+        var beforeDocument = LibraryDocument.FromSnapshot(seen);
+        var afterDocument = LibraryDocument.FromSnapshot(current);
+        return RecordsEqual(beforeDocument.Songs, afterDocument.Songs)
+            && RecordsEqual(beforeDocument.Setlists, afterDocument.Setlists);
+    }
+    private static bool RecordsEqual(IReadOnlyList<JsonObject> before, IReadOnlyList<JsonObject> after) =>
+        before.Count == after.Count && before.Zip(after).All(pair => JsonNode.DeepEquals(pair.First, pair.Second));
     public async Task SaveAsync(Dictionary<string,string> snapshot)
     {
         await viewGate.WaitAsync();

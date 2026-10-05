@@ -23,3 +23,6 @@
 .native-busy {opacity:.65;pointer-events:none;}
 #blazor-error-ui {display:none;position:fixed;bottom:0;left:0;right:0;padding:16px;background:#652b35;color:white;z-index:30000;}
 .boot-message {padding:32px;color:#eaeaea;font-family:system-ui;background:#1a1a2e;}
+
+/* Retained rows update quietly; background sync never replays entrance animations. */
+[data-library-row] { animation: none !important; }
