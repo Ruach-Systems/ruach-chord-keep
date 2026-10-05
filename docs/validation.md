@@ -1,5 +1,14 @@
 # Validation
 
+## Draft 1.0.2 packages — October 6, 2026
+
+- Created [unpublished draft 1.0.2](https://github.com/Ruach-Systems/ruach-chord-library/releases/tag/untagged-133563a9866551457e81), release ID `404082300`, from tag `v1.0.2` / source `56c386e447e2f5e5950d9eaeb953b955e7274743`. Android build number 3; Windows x64 installer unsigned as requested.
+- GitHub reported a [hosted-runner incident](https://www.githubstatus.com/incidents/3q1yb5m7ltvb). Canceled the queued packaging run `37370505860` and used the repository's local release scripts. At draft creation, verification run `37370505201` was still queued; no passing hosted CI result is claimed.
+- All 55 Core, 58 Supabase, 18 shared-session and 21 JavaScript tests passed locally. Windows installation, installed-file checks and uninstall passed using an isolated temporary destination. The existing portable app was not replaced.
+- The Android publish completed; the verification batch command encountered an invalid pre-existing `JAVA_HOME`. Recovered verification using installed Java 21 with a process-scoped override, restored the previous setting, then copied the verified signed APK. Its version name/code are `1.0.2` / `3`; certificate SHA-256 `95831c04603c22a2ff37b9873949c9b3f973213ba6bb25f6ae4e4691df223fb8` matches downloaded release 1.0.1.
+- Confirmed bundled app, bridge, loader and view-update scripts match committed source in both Windows publish files and Android APK entries. Downloaded all five draft assets after upload and verified their bytes against local files and GitHub digests. Package metadata identifies the expected source commit, Android build number and unsigned Windows status. SHA256SUMS covers both packages, release-info and the unsigned-Windows notice.
+- Remaining device/cloud checks are listed in the release notes. No new database migration was applied.
+
 ## Incremental UI reconciliation — October 6, 2026
 
 - Snapshot differences select only affected collections and views. Keyed list reconciliation retains song/setlist/home-row DOM identity, including repeated songs in a setlist, and patches changed attributes/text. Current-song chord content is patched without replacing its whole container; unrelated changes never render that sheet.
@@ -7,7 +16,7 @@
 - All 21 Node regression checks and all 18 shared-session tests passed. All 11 DOM checks passed at both 1280px and 414px widths, including the older-WebView movement fallback and preservation of chord whitespace. The browser fixture runs the shipped markup/scripts with synthetic offline data, checking zero no-change content mutations, untouched-row mutations/identity, inserts/sorts, search, focus/scroll, chord selection/content, duplicate rows, navigation, drag deferral, deletions and account resets.
 - Reproduce DOM checks by serving the repository root and opening `tests/ui-sync.html`; use both the desktop and mobile buttons. This fixture never signs in or accesses Supabase. Responsive browser checks do not establish physical Android WebView or two-device cloud behavior.
 - Windows Release and Android Debug builds passed with zero warnings/errors. `git diff --check` passed and no unmerged paths were found.
-- These changes are local; the existing 1.0.1 draft assets have not been regenerated.
+- These changes are included in unpublished draft 1.0.2, built from source commit `56c386e447e2f5e5950d9eaeb953b955e7274743`.
 
 ## Unchanged sync keeps the displayed page — October 5, 2026
 

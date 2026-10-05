@@ -11,8 +11,12 @@ Android build number: 3. Windows: x64, unsigned installer.
 
 ## Validation and installation
 
-Local validation: 18 shared-session tests, 21 JavaScript tests and all 11 browser DOM checks at both desktop and mobile widths passed. Windows Release and Android Debug builds passed with zero warnings/errors. The release workflow also runs Core/Supabase tests, builds both platforms, checks Windows installation/uninstall, and verifies package metadata and checksums before creating the draft.
+Local validation: all 55 Core, 58 Supabase, 18 shared-session and 21 JavaScript tests passed. All 11 browser DOM checks passed at both desktop and mobile widths. Windows Release and Android Debug builds passed with zero warnings/errors. The Windows installer passed installation, installed-file checks and uninstall. The Android APK passed signature verification with the same certificate as 1.0.1; its manifest reports version 1.0.2 and build 3. Both packages contain UI scripts matching the committed source. All five uploaded assets were downloaded again and matched their local hashes and GitHub SHA-256 digests. Release packages use the same scripts as the automated workflow.
+
+This draft was built locally because a [GitHub Actions incident](https://www.githubstatus.com/incidents/3q1yb5m7ltvb) delayed hosted runners. The queued packaging run was canceled; hosted CI has not established a passing result for this release. Source: `56c386e447e2f5e5950d9eaeb953b955e7274743`, tag `v1.0.2`.
 
 Install the Windows setup executable or signed Android APK. Android build 3 uses the existing release signing identity for updates from release builds 1 and 2. Development APKs use a different signature. Keep existing local data when updating; export it before any uninstall.
 
 No new database migration is required. This remains an unpublished draft for device testing. Physical Android WebView behavior and two-device cloud synchronization still require verification before publication. Distribution remains private while the source repository is private.
+
+Draft release: [Chord Library 1.0.2](https://github.com/Ruach-Systems/ruach-chord-library/releases/tag/untagged-133563a9866551457e81). It remains unpublished.
