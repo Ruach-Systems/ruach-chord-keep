@@ -6,6 +6,7 @@
 @inject IJSRuntime JS
 @inject IAppPlatform Platform
 @inject AppSession Session
+@inject AppBackNavigation BackNavigation
 
 <div id="library-root" inert="@(accountOpen || preview is not null || busy)">@((MarkupString)libraryHtml)</div>
 @if (!string.IsNullOrEmpty(startError))
@@ -57,11 +58,13 @@
     private string? importProfile;
     private LocalLibraryStore? importStore;
     private DotNetObjectReference<LibraryShell>? reference;
+    private IDisposable? backRegistration;
     private readonly CancellationTokenSource lifetime = new();
     private Task? syncLoop;
     private readonly SemaphoreSlim operations = new(1,1);
     protected override void OnInitialized()
     {
+        backRegistration = BackNavigation.Register(HandleBackAsync);
         using var stream = typeof(LibraryShell).Assembly.GetManifestResourceStream("ChordLibrary.Shared.Assets.library.html")!;
         using var reader = new StreamReader(stream); libraryHtml = reader.ReadToEnd();
     }
@@ -99,6 +102,19 @@
     }
     private void CloseAccount() { accountOpen = false; }
     private void CancelImport() { preview = null; pendingJson = ""; importError = ""; }
+    private async Task<bool> HandleBackAsync()
+    {
+        var handled = true;
+        await InvokeAsync(async () =>
+        {
+            if (authWait is not null) { authWait.Cancel(); return; }
+            if (busy || !ready) return;
+            if (preview is not null) { CancelImport(); StateHasChanged(); return; }
+            if (accountOpen) { CloseAccount(); StateHasChanged(); return; }
+            handled = await JS.InvokeAsync<bool>("NativeBridge.handleBack");
+        });
+        return handled;
+    }
     private async Task Run(Func<Task> action)
     {
         if (busy) return; busy = true; message = "";
@@ -161,6 +177,7 @@
     }
     public async ValueTask DisposeAsync()
     {
+        backRegistration?.Dispose();
         lifetime.Cancel();
         if (syncLoop is not null) { try { await syncLoop; } catch (JSDisconnectedException) { } }
         reference?.Dispose(); lifetime.Dispose();

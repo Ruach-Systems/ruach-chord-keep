@@ -3434,6 +3434,8 @@ body:has(.sidebar.open) .fab {
 /* Mini Sync Indicator (inside user button) */
 .sync-indicator-mini {
   position: absolute;
+  z-index: 1;
+  pointer-events: none;
   bottom: -2px;
   right: -2px;
   width: 12px;
@@ -3447,7 +3449,8 @@ body:has(.sidebar.open) .fab {
   transition: var(--transition-fast);
 }
 
-.sync-indicator-mini.synced {
+.sync-indicator-mini.synced,
+.sync-indicator-mini.idle {
   background: var(--success);
 }
 
@@ -3456,7 +3459,8 @@ body:has(.sidebar.open) .fab {
   animation: spin 1s linear infinite;
 }
 
-.sync-indicator-mini.sync-error {
+.sync-indicator-mini.sync-error,
+.sync-indicator-mini.error {
   background: #fcc419;
 }
 

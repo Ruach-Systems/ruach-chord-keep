@@ -262,6 +262,19 @@ function deferred() {
   return { promise, resolve, reject };
 }
 
+test('native Back consumes loading state and delegates the mounted app result', () => {
+  const bridge = bridgeContext().context.NativeBridge;
+  assert.equal(bridge.handleBack(), true);
+  let calls = 0;
+  bridge.registerAppLifecycle({ handleBack: () => { calls++; return false; } });
+  assert.equal(bridge.handleBack(), false);
+  assert.equal(calls, 1);
+  bridge.registerAppLifecycle({ handleBack: () => true });
+  assert.equal(bridge.handleBack(), true);
+  bridge.registerAppLifecycle({ handleBack: () => { throw new Error('UI failed'); } });
+  assert.throws(() => bridge.handleBack(), /UI failed/);
+});
+
 test('data-only sync preserves preferences and account reset always refreshes them', async () => {
   const host = bridgeContext();
   const bridge = host.context.NativeBridge;
@@ -311,6 +324,22 @@ test('Google avatar loads with icon fallback and clears on sign-out or unsafe UR
     assert.equal(avatar.src, undefined);
     assert.equal(icon.hidden, false);
   }
+});
+
+test('account indicator has readable labels for each native sync state', () => {
+  const host = bridgeContext();
+  const indicator = {};
+  const button = { attributes: {}, setAttribute(name, value) { this.attributes[name] = value; } };
+  host.context.document.getElementById = id => ({ 'user-btn': button, 'sync-indicator': indicator })[id] || null;
+  for (const [status, label] of [['idle', 'Up to date'], ['syncing', 'Syncing…'],
+    ['error', 'Sync unavailable. Changes remain saved on this device.'], ['offline', 'Offline. Changes remain saved on this device.']]) {
+    host.context.NativeBridge.setAccount({ signedIn: true, status });
+    assert.equal(indicator.className, 'sync-indicator-mini ' + status);
+    assert.equal(indicator.title, label);
+    assert.equal(button.attributes['aria-label'], 'Account & sync. ' + label);
+  }
+  host.context.NativeBridge.setAccount({ signedIn: false, status: 'offline' });
+  assert.equal(indicator.title, 'Saved on this device');
 });
 
 test('native save queue serializes concurrent edits and durably writes the newest snapshot', async () => {

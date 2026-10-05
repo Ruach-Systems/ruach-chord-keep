@@ -8,6 +8,7 @@ builder.Services.AddScoped<IAppPlatform,PreviewPlatform>();
 builder.Services.AddScoped<ISecretStore,PreviewSecretStore>();
 builder.Services.AddSingleton(AppDefaults.Load());
 builder.Services.AddScoped<AppSession>();
+builder.Services.AddScoped<AppBackNavigation>();
 builder.Services.AddSingleton(new HttpClient { Timeout = TimeSpan.FromSeconds(45) });
 var app = builder.Build();
 app.UseAntiforgery();

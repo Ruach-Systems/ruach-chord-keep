@@ -1,4 +1,10 @@
 <!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="../src/ChordLibrary.Shared/wwwroot/css/style.css"><link rel="stylesheet" href="../src/ChordLibrary.Shared/wwwroot/css/native.css">
 <style>html,body,#app{height:100%;margin:0}</style></head><body><div id="app"></div>
-<script src="../src/ChordLibrary.Shared/wwwroot/js/native-bridge.js"></script><script src="../src/ChordLibrary.Shared/wwwroot/js/view-updates.js"></script><script src="ui-sync-browser.js"></script></body></html>
+<script>
+// A new test run must inspect the current working files, including cached CSS.
+const fixtureAssetVersion = Date.now();
+document.querySelectorAll('link[rel="stylesheet"]').forEach(link => link.href += '?fixture=' + fixtureAssetVersion);
+for (const file of ['../src/ChordLibrary.Shared/wwwroot/js/native-bridge.js', '../src/ChordLibrary.Shared/wwwroot/js/view-updates.js', 'ui-sync-browser.js'])
+  document.write('<script src="' + file + '?fixture=' + fixtureAssetVersion + '"><\/script>');
+</script></body></html>

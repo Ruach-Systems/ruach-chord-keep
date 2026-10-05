@@ -88,8 +88,14 @@
     if (indicator) {
       const status = storageError ? 'error' : revision > savedRevision ? 'syncing' : (account.status || 'offline');
       indicator.className = 'sync-indicator-mini ' + status;
-      indicator.title = storageError || (revision > savedRevision ? 'Saving to this device…'
-        : (account.message || (account.signedIn ? 'Supabase: ' + status : 'Saved on this device')));
+      const labels = {
+        idle: 'Up to date', synced: 'Up to date', syncing: 'Syncing…',
+        error: account.message || 'Sync unavailable. Changes remain saved on this device.',
+        'sync-error': account.message || 'Sync unavailable. Changes remain saved on this device.',
+        offline: account.signedIn ? 'Offline. Changes remain saved on this device.' : 'Saved on this device'
+      };
+      indicator.title = storageError || (revision > savedRevision ? 'Saving to this device…' : labels[status] || 'Saved on this device');
+      if (button) button.setAttribute('aria-label', 'Account & sync. ' + indicator.title);
     }
   }
 
@@ -231,6 +237,7 @@
     },
     replaceSnapshot,
     registerAppLifecycle(callbacks) { appLifecycle = callbacks; },
+    handleBack() { return appLifecycle?.handleBack ? appLifecycle.handleBack() : true; },
     canSwitchAccount() { return appLifecycle ? appLifecycle.canSwitchAccount() : true; },
     canRefresh() {
       return revision === savedRevision && !saving &&

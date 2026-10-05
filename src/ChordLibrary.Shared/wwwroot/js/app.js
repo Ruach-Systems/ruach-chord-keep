@@ -111,6 +111,10 @@
   let autoScrollSpeed = 1; // 0=slow, 1=medium, 2=fast
   let desktopSidebarCollapsed = false;
   let persistentSidebarLayout = null;
+  let navigationHistory = [];
+  let restoringNavigation = false;
+  let modalLayers = [];
+  let songFormBaseline = '', setlistFormBaseline = '';
   const AUTO_SCROLL_SPEEDS = [0.5, 1, 2]; // px per tick
 
   // ================================================
@@ -1118,8 +1122,98 @@
     });
   }
 
+  function rememberNavigation() {
+    if (restoringNavigation) return;
+    navigationHistory.push({
+      songId: selectedSongId, setlistId: selectedSetlistId, index: viewingSetlistSongIndex,
+      scroll: dom.content.scrollTop, sheetScroll: dom.songContentSection.scrollTop,
+      textScroll: dom.songContent.scrollTop,
+      tab: document.querySelector('.tab-btn.active')?.dataset.tab || 'songs'
+    });
+  }
+
+  function restoreNavigation(state) {
+    const song = songs.find(item => item.id === state.songId);
+    const setlist = setlists.find(item => item.id === state.setlistId);
+    // A background deletion must not bring back an unavailable screen.
+    if ((state.songId && !song) || (!state.songId && state.setlistId && !setlist)) return false;
+    restoringNavigation = true;
+    try {
+      if (song) {
+        const members = setlist?.songIds.filter(id => songs.some(item => item.id === id)) || [];
+        const index = members[state.index] === song.id ? state.index : members.indexOf(song.id);
+        selectedSetlistId = setlist?.id || null;
+        selectSong(song.id, !!setlist && index >= 0, index);
+      } else if (setlist) selectSetlist(setlist.id);
+      else goHome();
+      setSidebarTab(state.tab);
+      requestAnimationFrame(() => {
+        dom.content.scrollTop = state.scroll || 0;
+        dom.songContentSection.scrollTop = state.sheetScroll || 0;
+        dom.songContent.scrollTop = state.textScroll || 0;
+        updateSheetScrollTopButton();
+      });
+      return true;
+    } finally { restoringNavigation = false; }
+  }
+
+  function returnToSetlist() {
+    if (!selectedSetlistId || !requestDiscardInlineEdit()) return;
+    const previous = navigationHistory[navigationHistory.length - 1];
+    if (previous && !previous.songId && previous.setlistId === selectedSetlistId) {
+      navigationHistory.pop();
+      restoreNavigation(previous);
+    } else {
+      restoringNavigation = true;
+      try { selectSetlist(selectedSetlistId); }
+      finally { restoringNavigation = false; }
+    }
+  }
+
+  function songFormValues() {
+    return JSON.stringify([dom.songTitleInput.value, dom.songArtistInput.value, dom.songContentInput.value]);
+  }
+
+  function setlistFormValues() {
+    return JSON.stringify([dom.setlistNameInput.value, dom.setlistDescriptionInput.value]);
+  }
+
+  function handleAppBack() {
+    const visible = element => element && !element.classList.contains('hidden');
+    if (visible(dom.scanQrOverlay)) { closeScannerOverlay(); return true; }
+    if (visible($('tour-overlay'))) { dismissTour(); return true; }
+    const modal = modalLayers.slice().reverse().find(visible);
+    if (modal) {
+      if (modal === dom.songModal) {
+        if (songFormValues() === songFormBaseline || window.confirm('Discard your unsaved song changes?')) closeSongModal();
+      } else if (modal === dom.setlistModal) {
+        if (setlistFormValues() === setlistFormBaseline || window.confirm('Discard your unsaved setlist changes?')) closeSetlistModal();
+      } else if (modal === dom.confirmModal) closeConfirmModal();
+      else if (modal === dom.addSongsModal) closeAddSongsModal();
+      else if (modal === dom.shareQrModal) closeShareQrModal();
+      else if (modal === $('preferences-modal')) closePreferencesModal();
+      return true;
+    }
+    if (visible(dom.songActionsMenu)) { closeSongActionsMenu(); return true; }
+    const dropdown = $('user-dropdown');
+    if (dropdown?.classList.contains('visible')) { dropdown.classList.remove('visible'); return true; }
+    if (dom.sidebar.classList.contains('open')) { closeSidebar(); return true; }
+    if (inlineEditingSongId) {
+      if (requestDiscardInlineEdit()) renderSongDetail();
+      return true;
+    }
+    while (navigationHistory.length) {
+      if (restoreNavigation(navigationHistory.pop())) return true;
+    }
+    // Newly created/imported songs may open directly without a recorded parent.
+    if (selectedSongId && selectedSetlistId) { returnToSetlist(); return true; }
+    if (selectedSongId || selectedSetlistId) { goHome(); return true; }
+    return false;
+  }
+
   function goHome() {
     if (!requestDiscardInlineEdit()) return;
+    navigationHistory = [];
     selectedSongId = null;
     selectedSetlistId = null;
     viewingSetlistSongIndex = -1;
@@ -1196,6 +1290,8 @@
 
   function selectSong(id, fromSetlist = false, index = -1) {
     if (id !== inlineEditingSongId && !requestDiscardInlineEdit()) return;
+    if (selectedSongId !== id || (!fromSetlist && selectedSetlistId) || viewingSetlistSongIndex !== index)
+      rememberNavigation();
     selectedSongId = id;
     stopAutoScroll();
 
@@ -1261,6 +1357,7 @@
       dom.saveSongLabel.textContent = 'Add song';
     }
 
+    songFormBaseline = songFormValues();
     openModalWithFocusTrap(dom.songModal);
     setTimeout(() => dom.songTitleInput.focus(), 100);
   }
@@ -1395,6 +1492,7 @@
 
   function selectSetlist(id) {
     if (!requestDiscardInlineEdit()) return;
+    if (selectedSetlistId !== id || selectedSongId) rememberNavigation();
     selectedSetlistId = id;
     selectedSongId = null;
     viewingSetlistSongIndex = -1;
@@ -1429,6 +1527,7 @@
       dom.setlistForm.reset();
     }
 
+    setlistFormBaseline = setlistFormValues();
     openModalWithFocusTrap(dom.setlistModal);
     setTimeout(() => dom.setlistNameInput.focus(), 100);
   }
@@ -2332,6 +2431,8 @@
   let previouslyFocusedElement = null;
 
   function openModalWithFocusTrap(modalEl) {
+    modalLayers = modalLayers.filter(layer => layer !== modalEl);
+    modalLayers.push(modalEl);
     previouslyFocusedElement = document.activeElement;
     modalEl.classList.remove('hidden');
     // Small delay to allow DOM to render
@@ -2341,6 +2442,7 @@
   }
 
   function closeModalWithFocusTrap(modalEl) {
+    modalLayers = modalLayers.filter(layer => layer !== modalEl);
     modalEl.classList.add('hidden');
     if (activeFocusTrapHandler && modalEl.querySelector('.modal-content')) {
       modalEl.querySelector('.modal-content').removeEventListener('keydown', activeFocusTrapHandler);
@@ -2947,14 +3049,7 @@
 
     // Back to setlist button
     $('btn-back-setlist').addEventListener('click', () => {
-      if (selectedSetlistId && requestDiscardInlineEdit()) {
-        viewingSetlistSongIndex = -1;
-        selectedSongId = null;
-        renderSetlistDetail();
-        renderSetlistList();
-        dom.appTitle.textContent = 'Chord Library';
-        setSongActionsVisible(false);
-      }
+      returnToSetlist();
     });
 
     // Export song button
@@ -3467,6 +3562,7 @@
   }
 
   function resetNativeAccount() {
+    navigationHistory = [];
     stopAutoScroll();
     finishInlineEditState();
     selectedSongId = null;
@@ -3506,6 +3602,7 @@
 
   function init() {
     NativeBridge.registerAppLifecycle({
+      handleBack: handleAppBack,
       canSwitchAccount: canSwitchNativeAccount,
       canRefresh: canRefreshNativeSnapshot,
       resetForAccount: resetNativeAccount,

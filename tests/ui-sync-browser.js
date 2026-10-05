@@ -28,7 +28,7 @@
     await NativeBridge.initialize({ invokeMethodAsync: async () => undefined }, settings);
     NativeBridge.configure({ native: false });
     for (const file of ['qrcode.js', 'app.js']) await new Promise((resolve, reject) => {
-      const script = document.createElement('script'); script.src='../src/ChordLibrary.Shared/wwwroot/js/'+file;
+      const script = document.createElement('script'); script.src='../src/ChordLibrary.Shared/wwwroot/js/'+file+'?fixture='+Date.now();
       script.onload=resolve;script.onerror=reject;document.body.appendChild(script);
     });
     await reset();
@@ -147,6 +147,111 @@
       songs=[];setlists=[];await NativeBridge.flush();NativeBridge.replaceSnapshot(snapshot(),true);await settled();
       assert(byId('song-content').textContent==='','Old account sheet retained');
       assert(!byId('empty-state').classList.contains('hidden'),'Empty home absent after reset');
+    });
+    await check('Back returns song to setlist to home, and only home allows backgrounding', async () => {
+      await reset();
+      button('home-setlists-list','set').click(); await settled();
+      byId('setlist-songs').querySelector('.setlist-song-open').click(); await settled();
+      assert(NativeBridge.handleBack() === true, 'Song Back not consumed'); await settled();
+      assert(!byId('setlist-detail').classList.contains('hidden'), 'Setlist parent not restored');
+      assert(NativeBridge.handleBack() === true, 'Setlist Back not consumed'); await settled();
+      assert(!byId('empty-state').classList.contains('hidden'), 'Home not restored');
+      assert(NativeBridge.handleBack() === false, 'Home does not allow backgrounding');
+    });
+    await check('Back restores the previous standalone song and its scroll position', async () => {
+      await reset(); button('home-songs-list','song-0').click(); await settled();
+      const title = byId('app-title').textContent;
+      byId('song-content-section').scrollTop = 240; await settled();
+      const scroll = byId('song-content-section').scrollTop;
+      assert(scroll > 0, 'Fixture sheet is not scrollable');
+      document.querySelector('[data-tab="songs"]').click(); openSidebar();
+      button('song-list','song-1').click(); await settled();
+      assert(NativeBridge.handleBack(), 'Previous song Back not consumed'); await settled();
+      assert(byId('app-title').textContent === title, 'Previous song not restored');
+      assert(Math.abs(byId('song-content-section').scrollTop - scroll) < 2, 'Previous song scroll lost');
+      NativeBridge.handleBack(); await settled();
+      assert(NativeBridge.handleBack() === false, 'Navigation created a Back loop');
+    });
+    await check('Back closes the top modal, menus and mobile drawer before navigating', async () => {
+      await reset(); button('home-songs-list','song-0').click(); await settled();
+      byId('btn-preferences').click(); await settled();
+      assert(NativeBridge.handleBack(), 'Preferences Back not consumed'); await settled();
+      assert(byId('preferences-modal').classList.contains('hidden'), 'Preferences remains open');
+      assert(!byId('song-detail').classList.contains('hidden'), 'Back also navigated behind modal');
+      byId('btn-song-actions').click();
+      assert(NativeBridge.handleBack(), 'Menu Back not consumed');
+      assert(byId('song-actions-menu').classList.contains('hidden'), 'Actions menu remains open');
+      if (innerWidth < 768) {
+        openSidebar(); assert(NativeBridge.handleBack(), 'Drawer Back not consumed');
+        assert(!byId('sidebar').classList.contains('open'), 'Drawer remains open');
+        assert(!byId('song-detail').classList.contains('hidden'), 'Back navigated behind drawer');
+      }
+    });
+    await check('Back protects unsaved song and setlist forms and inline chords', async () => {
+      await reset();
+      const realConfirm = window.confirm; let allow = false; let prompts = 0;
+      window.confirm = () => { prompts++; return allow; };
+      try {
+        byId('btn-add-song').click(); await settled();
+        byId('song-title-input').value = 'Unsaved song';
+        assert(NativeBridge.handleBack(), 'Dirty form Back not consumed');
+        assert(!byId('song-modal').classList.contains('hidden'), 'Canceled discard lost the form');
+        assert(byId('song-title-input').value === 'Unsaved song', 'Draft lost');
+        allow = true; NativeBridge.handleBack(); await settled();
+        assert(byId('song-modal').classList.contains('hidden'), 'Accepted discard did not close form');
+        button('home-setlists-list','set').click(); await settled();
+        byId('btn-edit-setlist').click(); await settled();
+        byId('setlist-name-input').value = 'Unsaved set'; allow = false;
+        NativeBridge.handleBack();
+        assert(!byId('setlist-modal').classList.contains('hidden'), 'Canceled setlist discard lost form');
+        allow = true; NativeBridge.handleBack(); await settled();
+        byId('setlist-songs').querySelector('.setlist-song-open').click(); await settled();
+        byId('btn-inline-edit').click(); await settled();
+        byId('song-content').textContent = 'Unsaved chords';
+        byId('song-content').dispatchEvent(new Event('input', { bubbles: true }));
+        allow = false; NativeBridge.handleBack();
+        assert(byId('song-content').isContentEditable, 'Canceled chord discard ended edit');
+        allow = true; NativeBridge.handleBack(); await settled();
+        assert(!byId('song-content').isContentEditable, 'Accepted chord discard did not end edit');
+        assert(!byId('song-detail').classList.contains('hidden'), 'Editor Back navigated away from song');
+        assert(prompts >= 6, 'Expected discard prompts were bypassed');
+      } finally { window.confirm = realConfirm; }
+    });
+    await check('Back skips remotely deleted history and account changes clear navigation', async () => {
+      await reset(); button('home-songs-list','song-0').click(); await settled();
+      document.querySelector('[data-tab="songs"]').click(); openSidebar(); button('song-list','song-1').click(); await settled();
+      songs = songs.filter(song => song.id !== 'song-0'); await sync();
+      NativeBridge.handleBack(); await settled();
+      assert(!byId('empty-state').classList.contains('hidden'), 'Deleted historical song reappeared');
+      button('home-songs-list','song-1').click(); await settled();
+      await reset();
+      assert(NativeBridge.handleBack() === false, 'Old account navigation survived reset');
+    });
+    await check('account badge remains colored above the avatar in both themes and all sync states', async () => {
+      await reset();
+      const avatar = byId('user-avatar'), icon = byId('user-icon'), dot = byId('sync-indicator');
+      const theme = document.documentElement.getAttribute('data-theme');
+      dot.style.transition = 'none';
+      avatar.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="32" height="32"%3E%3Ccircle cx="16" cy="16" r="16" fill="%232fa59b"/%3E%3C/svg%3E';
+      try {
+        for (const mode of ['light','dark']) {
+          document.documentElement.setAttribute('data-theme', mode);
+          for (const state of ['idle','syncing','error','offline']) {
+            NativeBridge.setAccount({ signedIn: true, status: state });
+            avatar.classList.remove('hidden'); icon.classList.add('hidden');
+            const style = getComputedStyle(dot), rect = dot.getBoundingClientRect();
+            assert(style.backgroundColor !== 'rgba(0, 0, 0, 0)', mode + '/' + state + ' badge is transparent');
+            assert(Number(style.zIndex) > (Number(getComputedStyle(avatar).zIndex) || 0), 'Badge is behind avatar');
+            assert(rect.width >= 12 && rect.height >= 12 && rect.right <= innerWidth && rect.top >= 0, 'Badge is clipped');
+            assert(byId('user-btn').getAttribute('aria-label').includes(dot.title), 'Status is not accessible');
+          }
+        }
+      } finally {
+        document.documentElement.setAttribute('data-theme', theme);
+        dot.style.removeProperty('transition');
+        avatar.removeAttribute('src'); avatar.classList.add('hidden'); icon.classList.remove('hidden');
+        NativeBridge.setAccount({ signedIn: false, status: 'offline' });
+      }
     });
   } catch (error) { results.push('FAIL fixture initialization: '+error.stack); }
   const failed=results.filter(result=>result.startsWith('FAIL')).length;
