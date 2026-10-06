@@ -2,6 +2,8 @@
 
 The source repository is private. GitHub Releases and Actions downloads require repository access. General distribution can use a separate public download repository, a website, or app stores without making this source public. This workflow does not change repository visibility, deploy database migrations, publish to stores, or update installed apps automatically.
 
+Releases are created only on an explicit user request for each release. Code changes, commits, pushes and successful validation do not authorize generating a release or draft. The release workflows are manually dispatched; publishing a draft requires separate instruction.
+
 ## Release button
 
 1. Open [Actions → Release packages](https://github.com/Ruach-Systems/ruach-chord-library/actions/workflows/release.yml).
