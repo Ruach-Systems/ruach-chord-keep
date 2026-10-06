@@ -2769,12 +2769,23 @@
       ['Sus 4', 'sus4'], ['Major 6', '6'], ['Minor 6', 'm6'], ['Add 9', 'add9'],
       ['Diminished 7', 'dim7'], ['Half-dim 7', 'm7b5']];
     const roots = ['A', 'A#', 'B', 'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#'];
-    host.innerHTML = `<label class="sr-only" for="${host.id}-form">Chord form</label>
+    host.innerHTML = `<button class="chord-palette-toggle" type="button" aria-expanded="true" aria-controls="${host.id}-body" aria-label="Minimize chord palette" title="Minimize chord palette">
+      <span>Chords</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"></path></svg></button>
+      <div class="chord-palette-body" id="${host.id}-body"><label class="sr-only" for="${host.id}-form">Chord form</label>
       <select class="chord-palette-form" id="${host.id}-form">${forms.map(([name, suffix]) => `<option value="${suffix}">${name}</option>`).join('')}</select>
       <div class="chord-palette-grid" role="group" aria-label="Insert chord">${roots.map(root => `<button class="chord-palette-key" type="button" data-root="${root}"><span>${root}</span><small></small></button>`).join('')}</div>
-      <span class="chord-palette-hint" aria-hidden="true">Adds | · 4 counts</span>`;
+      <span class="chord-palette-hint" aria-hidden="true">Adds | · 4 counts</span></div>`;
     const selector = host.querySelector('select');
-    const buttons = [...host.querySelectorAll('button')];
+    const toggle = host.querySelector('.chord-palette-toggle');
+    toggle.addEventListener('click', () => {
+      const minimized = host.classList.toggle('is-minimized');
+      host.parentElement.classList.toggle('has-minimized-chords', minimized);
+      host.querySelector('.chord-palette-body').hidden = minimized;
+      toggle.setAttribute('aria-expanded', String(!minimized));
+      toggle.setAttribute('aria-label', minimized ? 'Show chord palette' : 'Minimize chord palette');
+      toggle.title = minimized ? 'Show chord palette' : 'Minimize chord palette';
+    });
+    const buttons = [...host.querySelectorAll('button[data-root]')];
     const updateLabels = () => buttons.forEach(button => {
       const chord = button.dataset.root + selector.value;
       button.querySelector('small').textContent = selector.value;

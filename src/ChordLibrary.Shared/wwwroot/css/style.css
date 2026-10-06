@@ -3394,6 +3394,20 @@ body:has(.sidebar.open) .fab {
   font: inherit;
   font-size: 12px;
 }
+.chord-palette-body { display: flex; flex-direction: column; gap: 6px; min-height: 0; }
+.chord-palette-body[hidden] { display: none; }
+.chord-palette-toggle {
+  display: flex; align-items: center; justify-content: space-between; gap: 4px;
+  flex-shrink: 0; width: 100%; min-height: 44px; padding: 4px;
+  border: 0; border-radius: 7px; background: transparent; color: var(--text-secondary);
+  font: inherit; font-size: 12px; cursor: pointer; touch-action: manipulation;
+}
+.chord-palette-toggle:hover { background: var(--accent-dim); color: var(--accent); }
+.chord-palette-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.chord-palette-toggle svg { width: 16px; height: 16px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: transform .15s; }
+.chord-palette.is-minimized { width: 58px; }
+.chord-palette.is-minimized .chord-palette-toggle { flex-direction: column-reverse; justify-content: center; gap: 2px; font-size: 10px; }
+.chord-palette.is-minimized .chord-palette-toggle svg { transform: rotate(180deg); }
 .chord-palette-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3434,7 +3448,17 @@ body:has(.sidebar.open) .fab {
 .inline-song-edit-surface .inline-song-highlight { padding-right: 136px; }
 .song-compose-surface { position: relative; flex: 1; display: flex; min-height: 200px; }
 .modal-song .song-compose-surface textarea { width: 100%; padding-right: 136px; }
-@media (prefers-reduced-motion: reduce) { .chord-palette-key { transition: none; } }
+.song-content-section.is-content-editing.has-minimized-chords .song-content,
+.song-content-section.is-content-editing.has-minimized-chords .contenteditable-highlight,
+.inline-song-edit-surface.has-minimized-chords .inline-song-content,
+.inline-song-edit-surface.has-minimized-chords .inline-song-highlight,
+.modal-song .song-compose-surface.has-minimized-chords textarea { padding-right: 80px; }
+@media (max-height: 480px) {
+  .chord-palette, .chord-palette-body { gap: 3px; }
+  .chord-palette { padding: 4px 6px; }
+  .chord-palette-hint { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .chord-palette-key, .chord-palette-toggle svg { transition: none; } }
 
 /* Song Selector */
 .modal-content.song-picker { height: min(680px, 90vh); height: min(680px, 90dvh); }

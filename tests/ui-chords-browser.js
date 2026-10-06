@@ -99,8 +99,32 @@
         assert(getComputedStyle(content).paddingRight===getComputedStyle(highlight).paddingRight,'Highlight/text gutter mismatch');
         assert(parseFloat(getComputedStyle(content).paddingRight)>=palette.width+16,'Text runs underneath chords');
         assert(key('inline-chord-palette','A').getBoundingClientRect().height>=44,'Touch button too small');
+        assert(host.querySelector('.chord-palette-grid').getBoundingClientRect().height>=44,'Compact palette clips an entire chord button');
         assert(document.documentElement.scrollWidth<=innerWidth,'Horizontal page overflow');
       }
+    });
+    await check('inline minimize/show preserves draft, caret and form while reclaiming text space', async () => {
+      const host=$('inline-chord-palette'), toggle=host.querySelector('.chord-palette-toggle');
+      form('inline-chord-palette','m7');textRange(3);const before=JSON.stringify(stored());
+      const down=new PointerEvent('pointerdown',{bubbles:true,cancelable:true,isPrimary:true,pointerType:'touch'});
+      toggle.dispatchEvent(down);assert(down.defaultPrevented,'Toggle would blur the mobile editor');toggle.click();
+      assert(host.querySelector('.chord-palette-body').hidden && toggle.getAttribute('aria-expanded')==='false','Palette did not minimize');
+      assert(toggle.getAttribute('aria-label')==='Show chord palette','Restore action unclear');
+      assert(document.activeElement===$('song-content') && getSelection().anchorOffset===3,'Minimize lost caret/focus');
+      assert(getComputedStyle($('song-content')).paddingRight==='80px' && getComputedStyle($('contenteditable-highlight')).paddingRight==='80px','Minimize did not reclaim matched text space');
+      toggle.focus();toggle.click();assert(document.activeElement===toggle,'Keyboard focus lost on restore');
+      assert(!host.querySelector('.chord-palette-body').hidden && toggle.getAttribute('aria-expanded')==='true','Palette did not restore');
+      assert(host.querySelector('select').value==='m7' && key('inline-chord-palette','C#').title==='C#m7|','Chord form changed on restore');
+      key('inline-chord-palette','C#').click();assert($('song-content').innerText==='C| C#m7|verse','Restore lost insertion point');
+      assert(JSON.stringify(stored())===before,'Toggle saved a draft');
+    });
+    await check('new-song minimize/show preserves text selection and its chord form', async () => {
+      $('btn-save-content-edit').click();$('btn-add-song').click();await settled();
+      const editor=$('song-content-input'), host=$('song-chord-palette'), toggle=host.querySelector('.chord-palette-toggle');
+      editor.value='Intro tail';editor.focus();editor.setSelectionRange(6,10);form('song-chord-palette','dim');toggle.click();
+      assert(host.querySelector('.chord-palette-body').hidden && getComputedStyle(editor).paddingRight==='80px','Textarea minimize failed');
+      toggle.click();key('song-chord-palette','A#').click();assert(editor.value==='Intro A#dim|','Textarea selection/form lost');
+      editor.value='';$('btn-close-song-modal').click();$('btn-inline-edit').click();await settled();
     });
     form('inline-chord-palette','');textRange(0);
     results.push(results.some(line=>line.startsWith('FAIL'))?'CHECKS FAILED':`ALL ${results.length} CHECKS PASSED; inline preview ready.`);
