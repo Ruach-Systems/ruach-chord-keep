@@ -36,4 +36,4 @@ Other assets: `SHA256SUMS.txt`, `release-info.json` and `WINDOWS-UNSIGNED.txt`.
 
 Physical-device upgrade, offline edit/restart/export and two-device synchronization still require acceptance testing. Keep this release an unpublished draft. Future release generation requires a new explicit instruction.
 
-The repository is private; downloading from the draft requires a GitHub account with repository access. [Open the 1.0.7 draft](https://github.com/Ruach-Systems/ruach-chord-library/releases/tag/untagged-66dcdb096adc1218f164).
+The repository is private; downloading from the draft requires a GitHub account with repository access. [Open GitHub Releases](https://github.com/Ruach-Systems/ruach-chord-library/releases) and select the 1.0.7 draft. GitHub can change a draft's direct URL when its details are edited.
