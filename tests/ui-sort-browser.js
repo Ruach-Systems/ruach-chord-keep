@@ -200,6 +200,8 @@
       assert(document.activeElement === picker.querySelector('.song-add-button[data-id="song-9"]'), 'Focus stranded on a disabled button');
       assert(picker.scrollTop === scroll, 'Picker scrolled unexpectedly');
       assert($('add-songs-status').textContent.includes('Song 8') && $('add-songs-status').textContent.includes('end'), 'Addition not announced');
+      $('btn-cancel-add-songs').click(); $('btn-add-songs-to-setlist').click();
+      assert(picker.scrollTop === 0, 'A fresh picker opening retained an old scroll position');
       await reset(Array.from({ length: 34 }, (_, i) => 'song-' + i)); $('btn-add-songs-to-setlist').click(); await wait(70);
       const last = $('song-selector').querySelector('.song-add-button[data-id="song-34"]'); last.focus({ preventScroll: true }); last.click(); await settled();
       assert(document.activeElement === $('btn-cancel-add-songs'), 'No available songs left, but focus did not move to Done');

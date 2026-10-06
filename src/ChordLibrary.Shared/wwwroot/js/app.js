@@ -1453,6 +1453,7 @@
     $('add-songs-status').textContent = '';
     renderAddSongsList();
     openModalWithFocusTrap(dom.addSongsModal);
+    dom.songSelector.scrollTop = 0;
   }
 
   function renderAddSongsList() {
