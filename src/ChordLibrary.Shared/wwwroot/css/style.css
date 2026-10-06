@@ -272,7 +272,7 @@ body {
   transform: scale(0.95);
 }
 
-/* Hamburger Menu */
+/* Library panel toggle: the same expanded state drives its label and icon. */
 .menu-toggle {
   display: flex;
   align-items: center;
@@ -290,6 +290,37 @@ body {
   stroke-width: 1.8;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+.menu-toggle-line {
+  transform-box: view-box;
+  transform-origin: 12px 12px;
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1), opacity 140ms ease;
+}
+
+.library-refresh { flex-shrink: 0; }
+.library-refresh:disabled { cursor: progress; }
+.library-refresh svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.library-refresh[aria-busy="true"] svg { animation: library-refresh-spin 900ms linear infinite; }
+@keyframes library-refresh-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .library-refresh[aria-busy="true"] svg { animation: none; }
+}
+
+.menu-toggle-line-top { transform: translateY(-6px); }
+.menu-toggle-line-bottom { transform: translateY(6px); }
+
+.menu-toggle[aria-expanded="true"] {
+  color: var(--accent);
+  background: var(--accent-dim);
+}
+
+.menu-toggle[aria-expanded="true"] .menu-toggle-line-top { transform: rotate(45deg); }
+.menu-toggle[aria-expanded="true"] .menu-toggle-line-middle { opacity: 0; transform: scaleX(0.4); }
+.menu-toggle[aria-expanded="true"] .menu-toggle-line-bottom { transform: rotate(-45deg); }
+
+@media (prefers-reduced-motion: reduce) {
+  .menu-toggle, .menu-toggle-line, .sidebar, .sidebar-overlay { transition: none !important; }
 }
 
 /* Main Content Area */
@@ -1637,26 +1668,6 @@ body:has(.sidebar.open) .fab {
 
 .inline-edit-active .song-content-heading {
   display: none;
-}
-
-.song-key-info {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-xs);
-  font-size: 0.7rem;
-  color: var(--text-muted);
-}
-
-.key-badge {
-  padding: 1px var(--spacing-xs);
-  border-radius: 3px;
-  font-weight: 500;
-  font-size: 0.7rem;
-}
-
-.key-badge {
-  background: var(--accent-dim);
-  color: var(--accent);
 }
 
 /* Auto-scroll FAB */

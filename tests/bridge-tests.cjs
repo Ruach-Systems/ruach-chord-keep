@@ -106,7 +106,7 @@ function musicContext() {
   const constants = appSource.slice(appSource.indexOf('  const NOTES ='),
     appSource.indexOf("  const SONG_QR_VERSION = 1;") + '  const SONG_QR_VERSION = 1;'.length);
   const names = ['transposeNote', 'transposeText', 'convertNoteNotation', 'applyNotationPreference',
-    'highlightChords', 'detectKey', 'normalizeSongPayload', 'extractSongFromParsedData',
+    'highlightChords', 'normalizeSongPayload', 'extractSongFromParsedData',
     'compressForQr', 'stripLyricsFromLine', 'clampFontSize'];
   vm.runInContext(constants + '\nconst MIN_FONT_SIZE = 10, MAX_FONT_SIZE = 24;\n' +
     "let notationPref = 'original';\n" + names.map(sourceFunction).join('\n') +
@@ -126,8 +126,6 @@ test('transposition preserves quality, slash bass and existing flat spelling', (
   const nonChord = 'C' + '1'.repeat(100) + 'x';
   assert.equal(music.transposeText(nonChord, 2), nonChord);
   assert.equal(music.transposeText(null, 2), '');
-  assert.equal(music.detectKey('Lyrics\n[Verse]\nDm7 G C'), 'D');
-  assert.equal(music.detectKey('No chord tokens here'), null);
 });
 
 test('sharp/flat preference transforms roots and bass without changing source text', () => {
@@ -261,6 +259,40 @@ function deferred() {
   const promise = new Promise((yes, no) => { resolve = yes; reject = no; });
   return { promise, resolve, reject };
 }
+
+test('Refresh waits for durable local saving and coalesces repeated clicks', async () => {
+  const saving = deferred(), refreshing = deferred();
+  const host = bridgeContext(() => saving.promise); await host.context.NativeBridge.initialize(host.reference, {});
+  const original = host.reference.invokeMethodAsync;
+  host.reference.invokeMethodAsync = async (method, ...args) => {
+    if (method === 'RefreshLibrary') { host.calls.push({method,args}); return refreshing.promise; }
+    return original(method, ...args);
+  };
+  host.context.LibraryStorage.setItem('chord-library-songs', '[]');
+  const one = host.context.NativeBridge.refreshLibrary();
+  const two = host.context.NativeBridge.refreshLibrary();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(host.calls.filter(call => call.method === 'RefreshLibrary').length, 0);
+  saving.resolve(); await new Promise(resolve => setImmediate(resolve));
+  assert.equal(host.calls.filter(call => call.method === 'RefreshLibrary').length, 1);
+  refreshing.resolve(); await Promise.all([one,two]);
+});
+
+test('deferred cloud updates are delivered when editing ends without another cloud poll', async () => {
+  const host = bridgeContext(); await host.context.NativeBridge.initialize(host.reference, {});
+  let editing = true;
+  host.context.NativeBridge.registerAppLifecycle({canRefresh: () => !editing});
+  host.context.NativeBridge.setRefreshPending(true);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(host.calls.filter(call => call.method === 'ApplyPendingRefresh').length, 0);
+  editing = false; host.context.NativeBridge.notifyUiReady();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(host.calls.filter(call => call.method === 'ApplyPendingRefresh').length, 1);
+  assert.equal(host.calls.filter(call => call.method === 'RefreshLibrary').length, 0);
+  host.context.NativeBridge.setRefreshPending(false);
+  host.context.NativeBridge.notifyUiReady(); await new Promise(resolve => setImmediate(resolve));
+  assert.equal(host.calls.filter(call => call.method === 'ApplyPendingRefresh').length, 1);
+});
 
 test('native Back consumes loading state and delegates the mounted app result', () => {
   const bridge = bridgeContext().context.NativeBridge;

@@ -5,10 +5,17 @@
       <button class="btn-icon menu-toggle" id="menu-toggle" type="button" aria-label="Open library panel"
         aria-controls="sidebar" aria-expanded="false" title="Open library panel">
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-          <path d="M4 6h16M4 12h16M4 18h16"></path>
+          <path class="menu-toggle-line menu-toggle-line-top" d="M5 12h14"></path>
+          <path class="menu-toggle-line menu-toggle-line-middle" d="M5 12h14"></path>
+          <path class="menu-toggle-line menu-toggle-line-bottom" d="M5 12h14"></path>
         </svg>
       </button>
       <h1 class="app-title" id="app-title">Chord Library</h1>
+      <button class="btn-icon library-refresh" id="btn-refresh-library" type="button" aria-label="Refresh library" title="Refresh library" aria-busy="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M21 12a9 9 0 1 1-2.64-6.36L21 8M21 3v5h-5"></path>
+        </svg>
+      </button>
       <button class="btn-icon theme-toggle hidden" id="theme-toggle" aria-label="Toggle light/dark theme"
         title="Toggle Theme">
         <span id="theme-icon">🌙</span>
@@ -99,11 +106,10 @@
             <span class="tab-count" id="songs-tab-count">0</span>
           </button>
           <button class="tab-btn" data-tab="setlists" role="tab" aria-selected="false" aria-controls="setlists-tab" tabindex="-1">
-            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              <path d="M4 6h10M4 12h10M4 18h7"></path>
-              <path d="M17 14v6M17 14l4-1v5"></path>
-              <circle cx="15.5" cy="20" r="1.5"></circle>
-              <circle cx="19.5" cy="18" r="1.5"></circle>
+            <svg class="setlist-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M4 6h16M4 12h7M4 18h7"></path>
+              <path d="M17 18v-8l4-1"></path>
+              <circle cx="15" cy="18" r="2"></circle>
             </svg>
             <span>Setlists</span>
             <span class="tab-count" id="setlists-tab-count">0</span>
@@ -125,12 +131,12 @@
             </button>
           </div>
           <div class="sidebar-search">
-            <label class="sr-only" for="search-input">Search songs</label>
+            <label class="sr-only" for="search-input">Search songs by title or artist</label>
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
               <circle cx="11" cy="11" r="7"></circle>
               <path d="m20 20-4-4"></path>
             </svg>
-            <input type="text" id="search-input" placeholder="Search songs…" autocomplete="off" />
+            <input type="text" id="search-input" placeholder="Search title or artist…" autocomplete="off" />
           </div>
           <div class="sidebar-sort">
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -233,11 +239,10 @@
                 <div class="home-section-header">
                   <div class="home-section-heading">
                     <span class="home-section-icon" aria-hidden="true">
-                      <svg viewBox="0 0 24 24" focusable="false">
-                        <path d="M4 6h10M4 12h10M4 18h7"></path>
-                        <path d="M17 14v6M17 14l4-1v5"></path>
-                        <circle cx="15.5" cy="20" r="1.5"></circle>
-                        <circle cx="19.5" cy="18" r="1.5"></circle>
+                      <svg class="setlist-icon" viewBox="0 0 24 24" focusable="false">
+                        <path d="M4 6h16M4 12h7M4 18h7"></path>
+                        <path d="M17 18v-8l4-1"></path>
+                        <circle cx="15" cy="18" r="2"></circle>
                       </svg>
                     </span>
                     <div>
@@ -395,9 +400,6 @@
           <div class="song-content-meta">
             <div class="song-content-heading">
               <span class="song-viewer-eyebrow">Chord sheet</span>
-              <div class="song-key-info hidden" id="song-key-info">
-                <span class="key-badge" id="key-badge"></span>
-              </div>
             </div>
             <div class="char-buttons inline-char-buttons hidden" id="contenteditable-char-buttons"
               aria-label="Insert chord character">
@@ -486,11 +488,10 @@
           <section class="setlist-overview" aria-labelledby="setlist-title">
             <div class="setlist-overview-top">
               <span class="setlist-overview-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" focusable="false">
-                  <path d="M4 6h10M4 12h10M4 18h7"></path>
-                  <path d="M17 14v6M17 14l4-1v5"></path>
-                  <circle cx="15.5" cy="20" r="1.5"></circle>
-                  <circle cx="19.5" cy="18" r="1.5"></circle>
+                <svg class="setlist-icon" viewBox="0 0 24 24" focusable="false">
+                  <path d="M4 6h16M4 12h7M4 18h7"></path>
+                  <path d="M17 18v-8l4-1"></path>
+                  <circle cx="15" cy="18" r="2"></circle>
                 </svg>
               </span>
               <div class="setlist-overview-heading">
@@ -663,11 +664,10 @@
     <div class="modal-content modal-panel setlist-modal-content">
       <div class="modal-panel-header">
         <span class="modal-panel-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" focusable="false">
-            <path d="M4 6h10M4 12h10M4 18h7"></path>
-            <path d="M17 14v6M17 14l4-1v5"></path>
-            <circle cx="15.5" cy="20" r="1.5"></circle>
-            <circle cx="19.5" cy="18" r="1.5"></circle>
+          <svg class="setlist-icon" viewBox="0 0 24 24" focusable="false">
+            <path d="M4 6h16M4 12h7M4 18h7"></path>
+            <path d="M17 18v-8l4-1"></path>
+            <circle cx="15" cy="18" r="2"></circle>
           </svg>
         </span>
         <div class="modal-panel-heading">

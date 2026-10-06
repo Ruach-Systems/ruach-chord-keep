@@ -1,5 +1,13 @@
 # Validation
 
+## Event-driven refresh and mobile editing refinements — October 6, 2026
+
+- Replaced the native 25-second cloud timer with sync requests on startup, foreground/resume, restored connectivity, durable local saves/imports and explicit Refresh library. Requests coalesce and serialize, retaining one follow-up for changes saved during sync. Existing incremental checkpoints and latest-update-wins conflict behavior remain in use. Downloaded updates held behind editor/modal/undo/drag guards appear when the interaction finishes, without another cloud poll. Unchanged snapshots retain the displayed rows and sheet.
+- Added an animated hamburger/X drawer toggle and a simpler consistent setlist icon. Drawer song search now matches only title and artist. Removed the automatic first-chord Key badge while preserving transposition. Both inline and popup quick-symbol controls avoid blurring an already-focused editor, retain selection and use native text insertion where available.
+- All 28 shared Release tests passed, including scheduler serialization/coalescing/retry/disposal, reconnect signals, startup/manual incremental downloads and offline-edit upload on reconnection. All 25 Node checks passed, including durable-save ordering, manual refresh coalescing and deferred UI delivery. All 22 browser checks passed at both 414px and 1280px with the shipped assets and synthetic offline data. Quick-symbol checks verify insertion, caret and zero blur in both editors; they do not emulate an Android keyboard.
+- Windows Release, Android Debug and browser-preview Release builds passed with zero warnings/errors. Mobile screenshots are saved under `artifacts/evidence/`. No Supabase migration or hosted data changes were required. These changes require a new installed package and are not part of the existing 1.0.5 draft.
+- Physical Android keyboard Caps Lock, app foreground/reconnection triggers and two-device cloud behavior still require device acceptance checks. While the app remains foregrounded without local edits, another device's changes are received through Refresh library; no periodic polling or realtime subscription is active.
+
 ## Automated draft 1.0.5 — October 6, 2026
 
 - [Release packages run 37377033320](https://github.com/Ruach-Systems/ruach-chord-library/actions/runs/37377033320) succeeded and created an unpublished draft with the Windows x64 installer and signed Android APK. Tag `v1.0.5` points to source `aa69a6e4a755a8b5e5aaa9dda6018f6feedfdd7a`; Android build number is 6. The previous 1.0.3/1.0.4 Android fixes are included for both platforms where applicable.

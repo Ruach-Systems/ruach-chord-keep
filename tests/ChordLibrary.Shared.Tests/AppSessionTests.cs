@@ -390,6 +390,47 @@ public sealed class AppSessionTests : IDisposable
         await auth.SignInAsync("example@example.test", "test-password");
     }
 
+    [Fact]
+    public async Task RequestedStartupAndManualRefreshImmediatelyDeliverIncrementalCloudChanges()
+    {
+        var app = await SignedAppAsync(); await app.ReadInitialAsync();
+        var deliveries = new List<LibraryDocument>();
+        await using var scheduler = new AppSyncScheduler(async () => {
+            await app.SyncAsync();
+            await app.DeliverSnapshotAsync(snapshot => { deliveries.Add(LibraryDocument.FromSnapshot(snapshot)); return Task.CompletedTask; }, onlyIfChanged: true);
+        });
+        server.Put(Alpha, "songs", Song("a", "Latest on launch"), 1);
+        await scheduler.RequestAsync().WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Equal("Latest on launch", Title(Assert.Single(deliveries), "a"));
+        await scheduler.RequestAsync(); Assert.Single(deliveries);
+        server.Put(Alpha, "songs", Song("b", "New before manual refresh"), 2);
+        await scheduler.RequestAsync();
+        Assert.Equal(2, deliveries.Count); Assert.Equal(2, deliveries[1].Songs.Count);
+    }
+
+    [Fact]
+    public async Task ReconnectionUploadsOfflineEditsAndPullsCloudAdditionsWithoutWaitingForATimer()
+    {
+        var app = await SignedAppAsync(); var ui = await app.ReadInitialAsync();
+        ui[LibraryStorageKeys.Songs] = new JsonArray(Song("local", "Offline edit")).ToJsonString();
+        await app.SaveAsync(ui);
+        server.Put(Alpha, "songs", Song("remote", "New cloud song"), 1);
+        var signals = new AppSyncSignals(); signals.SetConnected(false);
+        LibrarySyncResult? result = null; Task request = Task.CompletedTask;
+        await using var scheduler = new AppSyncScheduler(async () => {
+            if (signals.IsConnected) result = await app.SyncAsync();
+        });
+        signals.RefreshRequested += () => request = scheduler.RequestAsync();
+        signals.Resume(); await request;
+        Assert.Null(result); Assert.Single((await app.Store.ReadSyncStateAsync(app.ProfileId)).PendingChanges);
+        signals.SetConnected(true); await request.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.NotNull(result); Assert.Equal(1, result.Uploaded);
+        var document = await app.Store.ReadDocumentAsync(app.ProfileId);
+        Assert.Equal("Offline edit", Title(document, "local"));
+        Assert.Equal("New cloud song", Title(document, "remote"));
+        Assert.Empty((await app.Store.ReadSyncStateAsync(app.ProfileId)).PendingChanges);
+    }
+
     private static Dictionary<string, string> Edit(Dictionary<string, string> snapshot, string id, string title)
     {
         var result = new Dictionary<string, string>(snapshot);

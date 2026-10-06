@@ -9,6 +9,8 @@
     catch (error) { results.push('FAIL ' + name + ': ' + error.message); }
   };
   let songs, setlists;
+  const nativeCalls = [];
+  let deferredCloudSnapshot = null;
   const settings = { 'chord-library-tour-seen': '2.4', 'chord-library-tour-features-seen': '2.4',
     'chord-library-font-size': '14', 'chord-library-theme': 'dark' };
   const snapshot = () => ({ ...settings, 'chord-library-songs': JSON.stringify(songs), 'chord-library-setlists': JSON.stringify(setlists) });
@@ -25,13 +27,72 @@
   const openSidebar = () => { if (innerWidth < 768 && !byId('sidebar').classList.contains('open')) byId('menu-toggle').click(); };
   try {
     byId('app').innerHTML = await (await fetch('../src/ChordLibrary.Shared/Assets/library.html')).text();
-    await NativeBridge.initialize({ invokeMethodAsync: async () => undefined }, settings);
+    await NativeBridge.initialize({ invokeMethodAsync: async method => {
+      nativeCalls.push(method);
+      if (method === 'ApplyPendingRefresh' && deferredCloudSnapshot) {
+        NativeBridge.replaceSnapshot(deferredCloudSnapshot); deferredCloudSnapshot = null;
+        NativeBridge.setRefreshPending(false);
+      }
+    } }, settings);
     NativeBridge.configure({ native: false });
     for (const file of ['qrcode.js', 'app.js']) await new Promise((resolve, reject) => {
       const script = document.createElement('script'); script.src='../src/ChordLibrary.Shared/wwwroot/js/'+file+'?fixture='+Date.now();
       script.onload=resolve;script.onerror=reject;document.body.appendChild(script);
     });
     await reset();
+    await check('drawer toggle reflects open and closed state through every dismissal route', async () => {
+      const toggle = byId('menu-toggle'), drawer = byId('sidebar');
+      const waitForAnimation = () => new Promise(resolve => setTimeout(resolve, 260));
+      const verify = async expanded => {
+        await waitForAnimation();
+        assert(toggle.getAttribute('aria-expanded') === String(expanded), 'Toggle state is stale');
+        assert(toggle.getAttribute('aria-label') === (expanded ? 'Hide library panel' : 'Show library panel'), 'Accessible action is stale');
+        const middle = getComputedStyle(toggle.querySelector('.menu-toggle-line-middle'));
+        assert(Number(middle.opacity) === (expanded ? 0 : 1), 'Icon does not match drawer state');
+        const top = new DOMMatrix(getComputedStyle(toggle.querySelector('.menu-toggle-line-top')).transform);
+        const bottom = new DOMMatrix(getComputedStyle(toggle.querySelector('.menu-toggle-line-bottom')).transform);
+        if (expanded) assert(top.b > 0.7 && bottom.b < -0.7, 'Open icon is not an X');
+        else assert(top.f === -6 && bottom.f === 6 && top.b === 0 && bottom.b === 0, 'Closed icon is not a hamburger');
+      };
+      if (innerWidth >= 768) {
+        if (toggle.getAttribute('aria-expanded') === 'false') toggle.click();
+        await verify(true); toggle.click(); await verify(false);
+        assert(document.body.classList.contains('sidebar-collapsed'), 'Desktop panel did not collapse');
+        toggle.click(); await verify(true);
+      } else {
+        if (drawer.classList.contains('open')) toggle.click();
+        await verify(false); toggle.click(); await verify(true);
+        document.querySelector('.sidebar-overlay').click(); await verify(false);
+        toggle.click(); await verify(true); NativeBridge.handleBack(); await verify(false);
+        toggle.click(); button('song-list', 'song-0').click(); await verify(false);
+        NativeBridge.handleBack(); await settled();
+      }
+      await reset();
+    });
+    await check('drawer song search matches only title and artist, including after sync', async () => {
+      const input = byId('search-input');
+      const search = async value => {
+        input.value = value; input.dispatchEvent(new Event('input'));
+        await new Promise(resolve => setTimeout(resolve, 180)); await settled();
+      };
+      songs = [
+        { ...songs[0], id: 'title-match', title: 'Morning Grace', artist: 'Other', content: 'Dm7\nonly_in_lyrics' },
+        { ...songs[1], id: 'artist-match', title: 'Another Song', artist: 'Grace Ensemble', content: 'Dm7' },
+        { ...songs[2], id: 'body-only', title: 'Third Song', artist: '', content: 'Grace\nDm7\nonly_in_lyrics' }
+      ];
+      await sync(); await search('  gRaCe  ');
+      assert(button('song-list', 'title-match') && button('song-list', 'artist-match'), 'Title/artist match missing');
+      assert(!button('song-list', 'body-only') && byId('song-list-summary').textContent === '2 results', 'Lyrics included in search');
+      songs[2].artist = 'Grace Writer'; await sync();
+      assert(button('song-list', 'body-only'), 'New artist match not added after sync');
+      songs[2].artist = ''; await sync();
+      assert(!button('song-list', 'body-only'), 'Former artist match remains after sync');
+      for (const query of ['only_in_lyrics', 'Dm7']) {
+        await search(query); assert(!byId('song-list').querySelector('.song-item'), 'Lyrics/chord-only match shown');
+      }
+      await search('   '); assert(byId('song-list').querySelectorAll('.song-item').length === 3, 'Blank search did not restore all songs');
+      await reset();
+    });
     await check('no-change snapshot produces zero content mutations', async () => {
       let mutations = 0;
       const observer = new MutationObserver(records => mutations += records.length);
@@ -70,6 +131,70 @@
       await sync(); assert(button('song-list','match'), 'Matching item absent');
       assert(!button('song-list','song-2'), 'Nonmatching item displayed');
       input.value=''; input.dispatchEvent(new Event('input')); await new Promise(resolve => setTimeout(resolve, 180)); await settled();
+    });
+    await check('Refresh is wired to native sync, shows progress and leaves existing rows intact', async () => {
+      const before = nativeCalls.filter(method => method === 'RefreshLibrary').length;
+      const row = button('home-songs-list','song-0');
+      const refresh = byId('btn-refresh-library');
+      refresh.click(); await settled();
+      assert(nativeCalls.filter(method => method === 'RefreshLibrary').length === before + 1, 'Refresh did not request native sync');
+      assert(button('home-songs-list','song-0') === row, 'Refresh replaced the displayed page');
+      NativeBridge.setAccount({signedIn:true,status:'syncing'});
+      assert(refresh.disabled && refresh.getAttribute('aria-busy') === 'true', 'Progress state missing');
+      NativeBridge.setAccount({signedIn:true,status:'idle'});
+      assert(!refresh.disabled && refresh.getAttribute('aria-busy') === 'false', 'Refresh stayed disabled');
+      NativeBridge.setAccount({signedIn:false,status:'offline'});
+    });
+    await check('cloud changes waiting behind an editor appear on close without another sync', async () => {
+      await reset(); button('home-songs-list','song-0').click(); await settled();
+      byId('btn-inline-edit').click(); await settled();
+      const deliveredBefore = nativeCalls.filter(method => method === 'ApplyPendingRefresh').length;
+      const pullsBefore = nativeCalls.filter(method => method === 'RefreshLibrary').length;
+      songs[1].title = 'Cloud title received during editing'; deferredCloudSnapshot = snapshot();
+      NativeBridge.setRefreshPending(true); await settled();
+      assert(nativeCalls.filter(method => method === 'ApplyPendingRefresh').length === deliveredBefore, 'Editor was interrupted');
+      NativeBridge.handleBack(); await settled();
+      assert(nativeCalls.filter(method => method === 'ApplyPendingRefresh').length === deliveredBefore + 1, 'Deferred update did not arrive on editor close');
+      assert(nativeCalls.filter(method => method === 'RefreshLibrary').length === pullsBefore, 'Editor close polled cloud again');
+      assert(button('song-list','song-1').querySelector('strong').textContent === songs[1].title, 'Cloud change not displayed');
+      await reset();
+    });
+    await check('quick symbols keep focus and caret in both editors and no key guess is shown', async () => {
+      await reset();
+      const tap = button => {
+        const down = new PointerEvent('pointerdown', {bubbles:true,cancelable:true,isPrimary:true,pointerType:'touch'});
+        assert(!button.dispatchEvent(down), 'Touch default focus was not prevented');
+        button.click();
+      };
+      byId('btn-add-song').click(); await settled();
+      const textarea = byId('song-content-input'); let blurs = 0;
+      const countBlur = () => blurs++;
+      textarea.value = 'CG'; textarea.focus(); textarea.setSelectionRange(1,1);
+      textarea.addEventListener('blur', countBlur);
+      tap(document.querySelector('#song-modal [data-char="#"]'));
+      assert(textarea.value === 'C#G' && textarea.selectionStart === 2 && document.activeElement === textarea, 'Textarea symbol/caret/focus changed');
+      textarea.setSelectionRange(0,2); tap(document.querySelector('#song-modal [data-pair="[]"]'));
+      assert(textarea.value === '[C#]G' && textarea.selectionStart === 3 && blurs === 0, 'Textarea pair insertion reset focus or caret');
+      textarea.removeEventListener('blur', countBlur);
+      const realConfirm = window.confirm; window.confirm = () => true;
+      try { byId('btn-cancel-song').click(); } finally { window.confirm = realConfirm; }
+      button('home-songs-list','song-0').click(); await settled();
+      assert(!byId('song-key-info') && !byId('key-badge'), 'Automatic key identifier remains');
+      byId('btn-inline-edit').click(); await settled();
+      const editor = byId('song-content'); editor.textContent = 'CG'; editor.dispatchEvent(new Event('input',{bubbles:true})); editor.focus();
+      const range = document.createRange(); range.setStart(editor.firstChild,1); range.collapse(true);
+      getSelection().removeAllRanges(); getSelection().addRange(range);
+      blurs = 0; editor.addEventListener('blur', countBlur);
+      tap(document.querySelector('[data-inline-char="#"]'));
+      assert(editor.textContent === 'C#G' && document.activeElement === editor, 'Inline symbol lost selection or focus');
+      const pairRange = document.createRange(); pairRange.selectNodeContents(editor);
+      getSelection().removeAllRanges(); getSelection().addRange(pairRange);
+      tap(document.querySelector('[data-inline-pair="[]"]'));
+      assert(editor.textContent === '[C#G]' && blurs === 0 && document.activeElement === editor, 'Inline pair reset focus');
+      editor.removeEventListener('blur', countBlur);
+      window.confirm = () => true;
+      try { NativeBridge.handleBack(); } finally { window.confirm = realConfirm; }
+      await reset();
     });
     await check('older WebViews preserve focus and scroll without moveBefore', async () => {
       const list=byId('song-list');

@@ -19,6 +19,9 @@
   let qrImportSupported = false;
   let avatarSource = '';
   let appLifecycle = null;
+  let refreshing = null;
+  let refreshPending = false;
+  let refreshNotification = false;
 
   function requireBridge() {
     if (!dotNet) throw new Error('Native storage is not ready. Please reopen the app.');
@@ -50,6 +53,13 @@
     const indicator = byId('sync-indicator');
     const avatar = byId('user-avatar');
     const icon = byId('user-icon');
+    const refreshButton = byId('btn-refresh-library');
+    if (refreshButton) {
+      const active = !!refreshing || account.status === 'syncing';
+      refreshButton.disabled = active;
+      refreshButton.setAttribute('aria-busy', String(active));
+      refreshButton.title = active ? 'Refreshing library…' : 'Refresh library';
+    }
     let nextAvatar = '';
     if (account.signedIn && account.avatarUrl) {
       try {
@@ -146,7 +156,31 @@
     } finally {
       saving = null;
       updateAccountUI();
+      notifyUiReady();
     }
+  }
+
+  function notifyUiReady() {
+    if (!refreshPending || refreshNotification || !dotNet) return;
+    refreshNotification = true;
+    queueMicrotask(async () => {
+      try {
+        if (refreshPending && window.NativeBridge.canRefresh())
+          await dotNet.invokeMethodAsync('ApplyPendingRefresh');
+      } catch (error) { reportError(error); }
+      finally { refreshNotification = false; }
+    });
+  }
+
+  async function refreshLibrary() {
+    if (refreshing) return refreshing;
+    refreshing = (async () => {
+      await flush();
+      await requireBridge().invokeMethodAsync('RefreshLibrary');
+    })();
+    updateAccountUI();
+    try { await refreshing; }
+    finally { refreshing = null; updateAccountUI(); }
   }
 
   const storage = {
@@ -209,6 +243,7 @@
     document.addEventListener('click', () => dropdown?.classList.remove('visible'));
     document.getElementById('btn-sign-in')?.addEventListener('click', () => openAccount().catch(reportError));
     document.getElementById('btn-sign-out')?.addEventListener('click', () => openAccount().catch(reportError));
+    document.getElementById('btn-refresh-library')?.addEventListener('click', () => refreshLibrary().catch(reportError));
     document.getElementById('btn-import-data')?.addEventListener('click', event => {
       if (!nativePlatform) return;
       event.preventDefault();
@@ -233,6 +268,7 @@
       values = Object.assign(Object.create(null), initialSnapshot ||
         await requireBridge().invokeMethodAsync('Initialize'));
       revision = savedRevision = 0;
+      refreshPending = false;
       updateAccountUI();
     },
     replaceSnapshot,
@@ -243,6 +279,9 @@
       return revision === savedRevision && !saving &&
         (!appLifecycle?.canRefresh || appLifecycle.canRefresh());
     },
+    setRefreshPending(pending) { refreshPending = !!pending; if (refreshPending) notifyUiReady(); },
+    notifyUiReady,
+    refreshLibrary,
     setAccount(next) {
       account = Object.assign({ signedIn: false, status: 'offline', email: '', displayName: '' }, next || {});
       updateAccountUI();

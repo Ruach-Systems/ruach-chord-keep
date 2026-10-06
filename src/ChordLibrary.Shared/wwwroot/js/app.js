@@ -367,14 +367,6 @@
     return result;
   }
 
-  function detectKey(content) {
-    if (!content) return null;
-    const match = content.match(CHORD_RE());
-    if (!match) return null;
-    const rootMatch = match[0].match(/^([A-G][#b]?)/);
-    return rootMatch ? rootMatch[1] : null;
-  }
-
   function startAutoScroll() {
     stopAutoScroll();
     const btn = $('btn-autoscroll');
@@ -581,8 +573,7 @@
     let filtered = query
       ? songs.filter(s =>
           s.title.toLowerCase().includes(query) ||
-          (s.artist && s.artist.toLowerCase().includes(query)) ||
-          (s.content && s.content.toLowerCase().includes(query)))
+          (s.artist && s.artist.toLowerCase().includes(query)))
       : songs;
 
     // Apply sorting
@@ -699,11 +690,10 @@
   function getHomeItemIcon(type) {
     if (type === 'setlist') {
       return `
-        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-          <path d="M5 7h9M5 12h9M5 17h6"></path>
-          <path d="M17 13v7M17 13l4-1v6"></path>
-          <circle cx="15.5" cy="20" r="1.5"></circle>
-          <circle cx="19.5" cy="18" r="1.5"></circle>
+        <svg class="setlist-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M4 6h16M4 12h7M4 18h7"></path>
+          <path d="M17 18v-8l4-1"></path>
+          <circle cx="15" cy="18" r="2"></circle>
         </svg>
       `;
     }
@@ -827,19 +817,6 @@
     if (transposeSteps > 0) dom.transposeValue.classList.add('positive');
     else if (transposeSteps < 0) dom.transposeValue.classList.add('negative');
     dom.transposeAccept.classList.toggle('hidden', transposeSteps === 0);
-
-    // Detected key info
-    const keyInfo = $('song-key-info');
-    const keyBadge = $('key-badge');
-    const originalKey = detectKey(song.content);
-    if (originalKey) {
-      const currentKey = transposeSteps !== 0 ? transposeNote(originalKey, transposeSteps) : originalKey;
-      const displayKey = convertNoteNotation(currentKey);
-      keyBadge.textContent = 'Key: ' + displayKey;
-      keyInfo.classList.remove('hidden');
-    } else {
-      keyInfo.classList.add('hidden');
-    }
 
     // Apply font size to song content
     const lineHeight = Math.round(currentFontSize * 1.6);
@@ -1094,6 +1071,7 @@
           clearTimeout(longPressTimer);
           longPressTimer = null;
           list._syncInteraction = false;
+          NativeBridge.notifyUiReady?.();
         }
         return;
       }
@@ -1112,6 +1090,7 @@
       if (dragging) {
         finishDrag(e.clientX, e.clientY);
       }
+      NativeBridge.notifyUiReady?.();
     });
 
     list.addEventListener('pointercancel', () => {
@@ -1119,6 +1098,7 @@
       clearTimeout(longPressTimer);
       longPressTimer = null;
       cancelDrag();
+      NativeBridge.notifyUiReady?.();
     });
   }
 
@@ -1890,6 +1870,7 @@
       undoBtn.removeEventListener('click', handleUndo);
       undoTimer = null;
       undoCleanup = null;
+      NativeBridge.notifyUiReady?.();
     };
 
     const handleUndo = () => {
@@ -2452,6 +2433,7 @@
       previouslyFocusedElement.focus();
       previouslyFocusedElement = null;
     }
+    NativeBridge.notifyUiReady?.();
   }
 
   /**
@@ -2625,7 +2607,7 @@
   }
 
   function insertPlainTextIntoContentEditable(text) {
-    dom.songContent.focus();
+    if (document.activeElement !== dom.songContent) dom.songContent.focus({ preventScroll: true });
     if (typeof document.execCommand === 'function' && document.execCommand('insertText', false, text)) return;
 
     const selection = window.getSelection();
@@ -2644,7 +2626,7 @@
   function insertPairIntoContentEditable(pair) {
     const open = pair.charAt(0);
     const close = pair.charAt(pair.length - 1);
-    dom.songContent.focus();
+    if (document.activeElement !== dom.songContent) dom.songContent.focus({ preventScroll: true });
 
     const selection = window.getSelection();
     if (!selection) return;
@@ -2738,6 +2720,7 @@
     inlineEditingMode = null;
     inlineEditDraft = '';
     clearInlineEditorPosition();
+    if (typeof NativeBridge !== 'undefined') NativeBridge.notifyUiReady?.();
   }
 
   function positionInlineEditor() {
@@ -2824,10 +2807,10 @@
   function insertCharAtCursor(textarea, char) {
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
-    const text = textarea.value;
-    textarea.value = text.substring(0, start) + char + text.substring(end);
+    if (document.activeElement !== textarea) textarea.focus({ preventScroll: true });
+    if (typeof document.execCommand === 'function' && document.execCommand('insertText', false, char)) return;
+    textarea.setRangeText(char, start, end, 'end');
     textarea.selectionStart = textarea.selectionEnd = start + char.length;
-    textarea.focus();
     textarea.dispatchEvent(new Event('input', { bubbles: true }));
   }
 
@@ -2837,10 +2820,11 @@
     const selectedText = textarea.value.substring(start, end);
     const open = pair.charAt(0);
     const close = pair.charAt(pair.length - 1);
-    textarea.setRangeText(open + selectedText + close, start, end, 'end');
+    if (document.activeElement !== textarea) textarea.focus({ preventScroll: true });
+    if (!(typeof document.execCommand === 'function' && document.execCommand('insertText', false, open + selectedText + close)))
+      textarea.setRangeText(open + selectedText + close, start, end, 'end');
     const caretPosition = start + open.length + selectedText.length;
     textarea.selectionStart = textarea.selectionEnd = caretPosition;
-    textarea.focus();
     textarea.dispatchEvent(new Event('input', { bubbles: true }));
   }
 
@@ -3195,6 +3179,14 @@
     }
 
     // Character insert buttons
+    // Touching these controls must not blur/reopen the IME and reset Caps Lock or its selection.
+    $$('.char-btn').forEach(btn => {
+      btn.addEventListener('pointerdown', event => {
+        const editor = btn.closest('#song-modal') ? dom.songContentInput
+          : btn.hasAttribute('data-legacy-inline-char') || btn.hasAttribute('data-legacy-inline-pair') ? dom.inlineSongContent : dom.songContent;
+        if (event.isPrimary && document.activeElement === editor) event.preventDefault();
+      });
+    });
     $$('#song-modal .char-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         if (btn.dataset.pair) {
@@ -3469,6 +3461,7 @@
   function dismissTour() {
     LibraryStorage.setItem(STORAGE_KEYS.TOUR_SEEN, TOUR_VERSION);
     $('tour-overlay').classList.add('hidden');
+    NativeBridge.notifyUiReady?.();
   }
 
   // ================================================

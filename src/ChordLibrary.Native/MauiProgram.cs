@@ -23,6 +23,7 @@ public static class MauiProgram
         builder.Services.AddSingleton(AppDefaults.Load());
         builder.Services.AddSingleton<AppSession>();
         builder.Services.AddSingleton<AppBackNavigation>();
+        builder.Services.AddSingleton<AppSyncSignals>();
 #if DEBUG
         builder.Services.AddBlazorWebViewDeveloperTools();
         builder.Logging.AddDebug();

@@ -7,6 +7,7 @@
 @inject IAppPlatform Platform
 @inject AppSession Session
 @inject AppBackNavigation BackNavigation
+@inject AppSyncSignals SyncSignals
 
 <div id="library-root" inert="@(accountOpen || preview is not null || busy)">@((MarkupString)libraryHtml)</div>
 @if (!string.IsNullOrEmpty(startError))
@@ -21,7 +22,8 @@
         {
             <p>Signed in as <strong>@Session.Email</strong></p>
             <p>Your account library is saved on this device and synchronized across your devices.</p>
-            <div class="native-actions"><button class="btn btn-primary" @onclick="ManualSync">Sync now</button><button class="btn btn-danger" @onclick="SignOut">Sign out</button></div>
+            <small>Cloud changes are checked when the app opens, resumes or reconnects. Use Refresh library to check now.</small>
+            <div class="native-actions"><button class="btn btn-primary" @onclick="ManualSync">Refresh library</button><button class="btn btn-danger" @onclick="SignOut">Sign out</button></div>
             <small>Sign out returns to the separate local library. Account data stays on this device for your next sign-in.</small>
         }
         else if (Session.Options is not null)
@@ -60,11 +62,13 @@
     private DotNetObjectReference<LibraryShell>? reference;
     private IDisposable? backRegistration;
     private readonly CancellationTokenSource lifetime = new();
-    private Task? syncLoop;
+    private AppSyncScheduler? syncScheduler;
+    private bool refreshPending;
     private readonly SemaphoreSlim operations = new(1,1);
     protected override void OnInitialized()
     {
         backRegistration = BackNavigation.Register(HandleBackAsync);
+        syncScheduler = new AppSyncScheduler(ProcessSyncRequest);
         using var stream = typeof(LibraryShell).Assembly.GetManifestResourceStream("ChordLibrary.Shared.Assets.library.html")!;
         using var reader = new StreamReader(stream); libraryHtml = reader.ReadToEnd();
     }
@@ -78,13 +82,19 @@
             await JS.InvokeVoidAsync("NativeBridge.initialize", reference);
             await JS.InvokeVoidAsync("libraryLoader.load");
             ready = true;
+            SyncSignals.RefreshRequested += RequestAutomaticSync;
+            SyncSignals.ConnectionChanged += ConnectionChanged;
             await UpdateAccount();
-            syncLoop = RunSyncLoop();
+            RequestAutomaticSync();
         }
         catch (Exception ex) { startError = ex.Message; await InvokeAsync(StateHasChanged); }
     }
     [JSInvokable] public async Task<Dictionary<string,string>> Initialize() { await Session.InitializeAsync(); return await Session.ReadInitialAsync(); }
-    [JSInvokable] public Task SaveStorage(Dictionary<string,string> snapshot) => Session.SaveAsync(snapshot);
+    [JSInvokable] public async Task SaveStorage(Dictionary<string,string> snapshot)
+    {
+        await Session.SaveAsync(snapshot);
+        if (Session.SignedIn) RequestAutomaticSync();
+    }
     [JSInvokable] public Task ExportFile(string filename, string json) => Platform.ExportAsync(filename,json);
     [JSInvokable] public Task<string?> PickSongFile() => Platform.PickJsonAsync();
     [JSInvokable] public Task<string?> ScanQr() => Platform.ReadQrAsync(true);
@@ -101,7 +111,7 @@
         await InvokeAsync(StateHasChanged);
     }
     private void CloseAccount() { accountOpen = false; }
-    private void CancelImport() { preview = null; pendingJson = ""; importError = ""; }
+    private void CancelImport() { preview = null; pendingJson = ""; importError = ""; _ = ApplyPendingRefresh(); }
     private async Task<bool> HandleBackAsync()
     {
         var handled = true;
@@ -128,6 +138,7 @@
     {
         await JS.InvokeVoidAsync("NativeBridge.flush");
         await Session.DeliverSnapshotAsync(snapshot => JS.InvokeVoidAsync("NativeBridge.replaceSnapshot", snapshot, reset).AsTask(), onlyIfChanged: !reset);
+        if (reset) { refreshPending = false; await JS.InvokeVoidAsync("NativeBridge.setRefreshPending", false); }
     }
     private Task GoogleSignIn() => Run(async () => {
         if (!await JS.InvokeAsync<bool>("NativeBridge.canSwitchAccount")) return;
@@ -138,7 +149,7 @@
     });
     private Task SignOut() => Run(async () => {
         if (!await JS.InvokeAsync<bool>("NativeBridge.canSwitchAccount")) return;
-        var revoked = await Session.Auth!.SignOutAsync(); Session.SelectAccount(); await Refresh(true);
+        var revoked = await Session.Auth!.SignOutAsync(); Session.SelectAccount(); cloudError = false; await Refresh(true);
         message = revoked ? "Signed out. Your local library is open." : "Signed out on this device. The server could not be reached to revoke the session.";
     });
     private async Task CommitImport()
@@ -150,36 +161,87 @@
             if (importProfile != Session.ProfileId || !ReferenceEquals(importStore, Session.Store)) throw new InvalidOperationException("The account changed. Select the backup again for this account.");
             await Session.Store.ImportAsync(Session.ProfileId,pendingJson); await Refresh(); CancelImport();
             await JS.InvokeVoidAsync("NativeBridge.showToast", "Library imported and saved on this device.", "success");
-        } catch(Exception ex) { importError = ex.Message; } finally { busy = false; operations.Release(); }
+        } catch(Exception ex) { importError = ex.Message; } finally { busy = false; operations.Release(); RequestAutomaticSync(); }
     }
-    private Task ManualSync() => Run(SyncInternal);
+    private Task ManualSync() => RefreshLibrary();
+    [JSInvokable] public async Task RefreshLibrary()
+    {
+        await RequestSync();
+        await JS.InvokeVoidAsync("NativeBridge.showToast", Session.HasAccountLibrary ? message : "Local library refreshed. Sign in with Google to sync across devices.", cloudError ? "error" : "info");
+    }
     private async Task SyncInternal()
     {
         if (!Session.SignedIn) return;
         await UpdateAccount("syncing");
         var result = await Session.SyncAsync(lifetime.Token); cloudError = result.Remaining > 0;
-        if (await JS.InvokeAsync<bool>("NativeBridge.canRefresh")) await Refresh();
-        message = result.Remaining == 0 ? "Library is up to date." : "Changes are saved on this device. Sync will retry automatically.";
+        refreshPending = true;
+        await DeliverPendingRefresh();
+        message = result.Remaining == 0 ? "Library is up to date." : "Changes are saved on this device. Refresh to retry, or reconnect to sync.";
     }
-    private Task UpdateAccount(string? status = null) => ready ? JS.InvokeVoidAsync("NativeBridge.setAccount", new { signedIn = Session.HasAccountLibrary, email = Session.Email, displayName = Session.DisplayName, avatarUrl = Session.AvatarUrl, status = status ?? ((cloudError || (Session.HasAccountLibrary && !Session.SignedIn)) ? "error" : Session.SignedIn ? "idle" : "offline"), message }).AsTask() : Task.CompletedTask;
-    private async Task RunSyncLoop()
+    private Task UpdateAccount(string? status = null) => ready ? JS.InvokeVoidAsync("NativeBridge.setAccount", new { signedIn = Session.HasAccountLibrary, email = Session.Email, displayName = Session.DisplayName, avatarUrl = Session.AvatarUrl, status = status ?? (!SyncSignals.IsConnected ? "offline" : (cloudError || (Session.HasAccountLibrary && !Session.SignedIn)) ? "error" : Session.SignedIn ? "idle" : "offline"), message }).AsTask() : Task.CompletedTask;
+    private void RequestAutomaticSync() { _ = RequestSync(); }
+    private void ConnectionChanged() { _ = PublishConnectionState(); }
+    private async Task PublishConnectionState()
     {
-        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(25));
+        if (!ready || lifetime.IsCancellationRequested) return;
+        try { await InvokeAsync(() => UpdateAccount()); }
+        catch (JSDisconnectedException) { }
+        catch (OperationCanceledException) when (lifetime.IsCancellationRequested) { }
+        catch (Exception) { /* A background connectivity notification must not escape the event handler. */ }
+    }
+    private async Task RequestSync()
+    {
+        if (!ready || lifetime.IsCancellationRequested) return;
+        try { await syncScheduler!.RequestAsync(); }
+        catch (OperationCanceledException) { }
+        catch (JSDisconnectedException) { }
+        catch (Exception) { cloudError = true; message = "Cloud sync is unavailable. Your changes remain saved on this device."; }
+    }
+    private Task ProcessSyncRequest() => InvokeAsync(async () => {
+        await operations.WaitAsync(lifetime.Token);
         try {
-            while (await timer.WaitForNextTickAsync(lifetime.Token)) await InvokeAsync(async () => {
-                if (!Session.SignedIn || busy || preview is not null || !await JS.InvokeAsync<bool>("NativeBridge.canRefresh")) return;
-                if (!await operations.WaitAsync(0)) return;
-                try { await JS.InvokeVoidAsync("NativeBridge.flush"); await SyncInternal(); await UpdateAccount(); }
-                catch (Exception) { message = "Cloud sync is unavailable. Changes remain saved on this device and will retry automatically."; await UpdateAccount("error"); }
-                finally { operations.Release(); }
-            });
-        } catch (OperationCanceledException) { }
+            await JS.InvokeVoidAsync("NativeBridge.flush");
+            if (!Session.HasAccountLibrary) { refreshPending = true; await DeliverPendingRefresh(); }
+            else if (!SyncSignals.IsConnected) message = "Offline. Changes remain saved on this device. Sync resumes when you reconnect.";
+            else if (Session.SignedIn) await SyncInternal();
+            else { cloudError = true; message = "Sign in again to sync this account."; }
+            await UpdateAccount();
+        }
+        catch (OperationCanceledException) when (lifetime.IsCancellationRequested) { }
+        catch (JSDisconnectedException) { }
+        catch (Exception) {
+            cloudError = true; message = "Cloud sync is unavailable. Changes remain saved on this device. Refresh to retry, or reconnect to sync.";
+            if (!lifetime.IsCancellationRequested) await UpdateAccount();
+        }
+        finally { operations.Release(); }
+    });
+    private async Task DeliverPendingRefresh()
+    {
+        if (!refreshPending) return;
+        if (preview is not null || !await JS.InvokeAsync<bool>("NativeBridge.canRefresh")) {
+            await JS.InvokeVoidAsync("NativeBridge.setRefreshPending", true); return;
+        }
+        await Refresh(); refreshPending = false;
+        await JS.InvokeVoidAsync("NativeBridge.setRefreshPending", false);
+    }
+    [JSInvokable] public async Task ApplyPendingRefresh()
+    {
+        if (!ready || !refreshPending || lifetime.IsCancellationRequested) return;
+        try { await operations.WaitAsync(lifetime.Token); }
+        catch (OperationCanceledException) when (lifetime.IsCancellationRequested) { return; }
+        try { await DeliverPendingRefresh(); }
+        catch (JSDisconnectedException) { }
+        catch (OperationCanceledException) when (lifetime.IsCancellationRequested) { }
+        catch (Exception) { cloudError = true; message = "The updated library could not be displayed. Refresh to retry."; }
+        finally { operations.Release(); }
     }
     public async ValueTask DisposeAsync()
     {
         backRegistration?.Dispose();
+        SyncSignals.RefreshRequested -= RequestAutomaticSync;
+        SyncSignals.ConnectionChanged -= ConnectionChanged;
         lifetime.Cancel();
-        if (syncLoop is not null) { try { await syncLoop; } catch (JSDisconnectedException) { } }
+        if (syncScheduler is not null) await syncScheduler.DisposeAsync();
         reference?.Dispose(); lifetime.Dispose();
     }
 }
