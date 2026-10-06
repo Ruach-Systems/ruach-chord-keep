@@ -896,6 +896,7 @@
     dom.appTitle.textContent = 'Chord Library';
 
     dom.setlistTitle.textContent = setlist.name;
+    dom.setlistSongs.dataset.setlistId = setlist.id;
     dom.setlistDescription.textContent = setlist.description || '';
     dom.setlistDescription.classList.toggle('hidden', !setlist.description);
 
@@ -920,7 +921,8 @@
 
     LibraryView.patchList(dom.setlistSongs, setlistSongs.map((song, index) => `
       <li class="setlist-song-item" data-id="${escapeHtml(String(song.id))}" data-index="${index}" style="animation-delay:${index * 40}ms">
-        <button class="drag-handle" type="button" aria-label="Drag ${escapeHtml(song.title)} to reorder" title="Drag to reorder">
+        <button class="drag-handle" type="button" aria-label="Move ${escapeHtml(song.title)}" aria-pressed="false"
+          aria-describedby="setlist-sort-instructions" title="Drag, or press Space to reorder">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
             <circle cx="8" cy="7" r="1.5"></circle><circle cx="16" cy="7" r="1.5"></circle>
             <circle cx="8" cy="12" r="1.5"></circle><circle cx="16" cy="12" r="1.5"></circle>
@@ -951,154 +953,11 @@
   }
 
   function setupSetlistDragDrop() {
-    const list = dom.setlistSongs;
-
-    if (list._dragDropInitialized) return;
-    list._dragDropInitialized = true;
-
-    let dragging = false;
-    let dragItem = null;
-    let dragIndex = -1;
-    let ghost = null;
-    let startY = 0;
-    let longPressTimer = null;
-    const LONG_PRESS_MS = 200;
-    const MOVE_THRESHOLD = 5;
-
-    function getItems() {
-      return Array.from(list.querySelectorAll('.setlist-song-item'));
-    }
-
-    function createGhost(item, x, y) {
-      ghost = document.createElement('div');
-      ghost.className = 'drag-ghost';
-      ghost.textContent = item.querySelector('.setlist-song-title').textContent;
-      document.body.appendChild(ghost);
-      moveGhost(x, y);
-    }
-
-    function moveGhost(x, y) {
-      if (ghost) {
-        ghost.style.left = (x + 12) + 'px';
-        ghost.style.top = (y - 20) + 'px';
-      }
-    }
-
-    function removeGhost() {
-      if (ghost) { ghost.remove(); ghost = null; }
-    }
-
-    function clearIndicators() {
-      list.querySelectorAll('.drag-over-top, .drag-over-bottom').forEach(el => {
-        el.classList.remove('drag-over-top', 'drag-over-bottom');
-      });
-    }
-
-    function getDropTarget(x, y) {
-      if (ghost) ghost.style.display = 'none';
-      const elem = document.elementFromPoint(x, y);
-      if (ghost) ghost.style.display = '';
-      return elem ? elem.closest('.setlist-song-item') : null;
-    }
-
-    function showIndicator(target, y) {
-      if (!target || target === dragItem) return;
-      clearIndicators();
-      const rect = target.getBoundingClientRect();
-      if (y < rect.top + rect.height / 2) {
-        target.classList.add('drag-over-top');
-      } else {
-        target.classList.add('drag-over-bottom');
-      }
-    }
-
-    function finishDrag(x, y) {
-      if (!dragging) return;
-      dragging = false;
-
-      const target = getDropTarget(x, y);
-      if (target && target !== dragItem) {
-        let targetIndex = parseInt(target.dataset.index, 10);
-        const rect = target.getBoundingClientRect();
-        if (y >= rect.top + rect.height / 2) targetIndex++;
-        reorderSetlistSong(dragIndex, targetIndex);
-      }
-
-      if (dragItem) dragItem.classList.remove('dragging');
-      dragItem = null;
-      removeGhost();
-      clearIndicators();
-      document.body.style.userSelect = '';
-    }
-
-    function cancelDrag() {
-      dragging = false;
-      if (dragItem) dragItem.classList.remove('dragging');
-      dragItem = null;
-      removeGhost();
-      clearIndicators();
-      document.body.style.userSelect = '';
-    }
-
-    // Pointer-based drag (works for both mouse and touch)
-    list.addEventListener('pointerdown', (e) => {
-      const handle = e.target.closest('.drag-handle');
-      if (!handle) return;
-      const item = handle.closest('.setlist-song-item');
-      if (!item) return;
-
-      e.preventDefault();
-      list._syncInteraction = true;
-      startY = e.clientY;
-      const startX = e.clientX;
-
-      longPressTimer = setTimeout(() => {
-        dragging = true;
-        dragItem = item;
-        dragIndex = parseInt(item.dataset.index, 10);
-        item.classList.add('dragging');
-        document.body.style.userSelect = 'none';
-        createGhost(item, startX, startY);
-        if (navigator.vibrate) navigator.vibrate(30);
-      }, LONG_PRESS_MS);
-
-      list.setPointerCapture(e.pointerId);
-    });
-
-    list.addEventListener('pointermove', (e) => {
-      if (longPressTimer && !dragging) {
-        if (Math.abs(e.clientY - startY) > MOVE_THRESHOLD) {
-          clearTimeout(longPressTimer);
-          longPressTimer = null;
-          list._syncInteraction = false;
-          NativeBridge.notifyUiReady?.();
-        }
-        return;
-      }
-      if (!dragging) return;
-
-      e.preventDefault();
-      moveGhost(e.clientX, e.clientY);
-      const target = getDropTarget(e.clientX, e.clientY);
-      showIndicator(target, e.clientY);
-    });
-
-    list.addEventListener('pointerup', (e) => {
-      list._syncInteraction = false;
-      clearTimeout(longPressTimer);
-      longPressTimer = null;
-      if (dragging) {
-        finishDrag(e.clientX, e.clientY);
-      }
-      NativeBridge.notifyUiReady?.();
-    });
-
-    list.addEventListener('pointercancel', () => {
-      list._syncInteraction = false;
-      clearTimeout(longPressTimer);
-      longPressTimer = null;
-      cancelDrag();
-      NativeBridge.notifyUiReady?.();
+    SetlistSort.attach(dom.setlistSongs, {
+      scroller: dom.content,
+      status: $('setlist-sort-status'),
+      onCommit: reorderSetlistSong,
+      onIdle: () => NativeBridge.notifyUiReady?.()
     });
   }
 
@@ -1159,6 +1018,7 @@
   }
 
   function handleAppBack() {
+    if (dom.setlistSongs?._sorter?.cancel()) return true;
     const visible = element => element && !element.classList.contains('hidden');
     if (visible(dom.scanQrOverlay)) { closeScannerOverlay(); return true; }
     if (visible($('tour-overlay'))) { dismissTour(); return true; }
@@ -1216,13 +1076,9 @@
 
   function reorderSetlistSong(fromIndex, toIndex) {
     const setlist = setlists.find(p => p.id === selectedSetlistId);
-    if (!setlist) return;
-
-    if (toIndex > fromIndex) toIndex--;
-    if (fromIndex === toIndex) return;
-
-    const [moved] = setlist.songIds.splice(fromIndex, 1);
-    setlist.songIds.splice(toIndex, 0, moved);
+    if (!setlist || fromIndex === toIndex) return;
+    const visibleIndices = setlist.songIds.map((id, index) => songs.some(song => song.id === id) ? index : -1).filter(index => index >= 0);
+    setlist.songIds = SetlistSort.reorderMembers(setlist.songIds, visibleIndices, fromIndex, toIndex);
     setlist.updatedAt = Date.now();
 
     saveSetlists();
@@ -3555,6 +3411,7 @@
   }
 
   function resetNativeAccount() {
+    dom.setlistSongs?._sorter?.cancel();
     navigationHistory = [];
     stopAutoScroll();
     finishInlineEditState();

@@ -525,7 +525,7 @@
             <div class="setlist-song-section-header">
               <div>
                 <h3 id="setlist-songs-title">Songs</h3>
-                <p id="setlist-reorder-hint">Drag the handle to reorder your set.</p>
+                <p id="setlist-reorder-hint">Hold a song, then drag to reorder.</p>
               </div>
               <button class="btn-add-songs" id="btn-add-songs-to-setlist" type="button">
                 <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -535,6 +535,8 @@
               </button>
             </div>
             <ul class="setlist-songs" id="setlist-songs"></ul>
+            <p class="sr-only" id="setlist-sort-instructions">Hold anywhere on a song except Remove, then drag. With a keyboard, focus its move button and press Space or Enter to pick it up, use arrow keys or Home and End to move, and press Space or Enter to place it. Escape cancels.</p>
+            <p class="sr-only" id="setlist-sort-status" role="status" aria-live="polite" aria-atomic="true"></p>
           </section>
         </div>
       </section>

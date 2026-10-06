@@ -1136,8 +1136,8 @@ body:has(.sidebar.open) .fab {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   padding: 0;
   border: 0;
   border-radius: 9px;
@@ -1145,7 +1145,7 @@ body:has(.sidebar.open) .fab {
   color: var(--text-muted);
   cursor: grab;
   user-select: none;
-  touch-action: none;
+  touch-action: pan-y;
   transition: var(--transition-fast);
 }
 
@@ -1166,34 +1166,55 @@ body:has(.sidebar.open) .fab {
 }
 
 .setlist-song-item.dragging {
-  opacity: 0.4;
+  opacity: 0.25;
+  border: 2px dashed var(--accent);
+  background: var(--accent-dim);
+  transition: none;
+}
+
+.setlist-song-item.sort-pressing {
+  border-color: var(--accent);
   background: var(--accent-dim);
 }
 
-.setlist-song-item.drag-over-top {
-  border-top: 2px solid var(--accent);
-  margin-top: -2px;
+.setlist-sort-active, .setlist-sort-active * {
+  cursor: grabbing !important;
 }
 
-.setlist-song-item.drag-over-bottom {
-  border-bottom: 2px solid var(--accent);
-  margin-bottom: -2px;
-}
+/* Reordering above the viewport must not make the browser's scroll anchor
+   fight the user's drag or the controlled edge scrolling. */
+.setlist-sort-scroller { overflow-anchor: none; }
 
-.drag-ghost {
+.setlist-song-item.setlist-drag-ghost {
   position: fixed;
   pointer-events: none;
   z-index: 9999;
-  opacity: 0.85;
+  opacity: 0.98;
   background: var(--bg-card);
   border: 1px solid var(--accent);
-  border-radius: 8px;
-  padding: var(--spacing-sm) var(--spacing-md);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  max-width: 280px;
+  box-shadow: 0 12px 32px #0005, 0 0 0 3px var(--accent-dim);
+  transform: scale(1.02) rotate(-0.4deg);
+  animation: none;
+  transition: none;
+}
+
+.setlist-drag-ghost .drag-handle { color: var(--accent); }
+.setlist-drag-ghost .btn-remove-song, .setlist-drag-ghost .setlist-song-chevron { visibility: hidden; }
+.setlist-sort-caption {
+  position: absolute;
+  right: 8px;
+  bottom: -24px;
+  padding: 3px 9px;
+  border-radius: 12px;
+  color: var(--bg-primary);
+  background: var(--accent);
+  font-size: 11px;
+  font-weight: 700;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .setlist-song-item.setlist-drag-ghost { transform: none; }
 }
 
 .empty-icon {
@@ -2266,6 +2287,7 @@ body:has(.sidebar.open) .fab {
 }
 
 .setlist-songs {
+  position: relative;
   display: grid;
   gap: var(--spacing-xs);
   list-style: none;
@@ -2273,11 +2295,15 @@ body:has(.sidebar.open) .fab {
 
 .setlist-song-item {
   display: grid;
-  grid-template-columns: 40px minmax(0, 1fr) 40px;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
   align-items: center;
   gap: var(--spacing-xs);
   min-width: 0;
   min-height: 64px;
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
   padding: var(--spacing-xs);
   border: 1px solid transparent;
   border-radius: 11px;
@@ -2370,8 +2396,8 @@ body:has(.sidebar.open) .fab {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   padding: 0;
   border: 0;
   border-radius: 9px;

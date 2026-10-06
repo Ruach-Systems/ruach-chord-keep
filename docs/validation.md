@@ -173,3 +173,11 @@ With the user's setup approval, used the Chrome account for project `ykfmjwlouvb
 5. Choose production signing identities and package/distribute release builds after device checks.
 
 Hosted SQL checks used synthetic, transaction-only identities. They do not establish live authentication or end-to-end device synchronization readiness.
+
+## Setlist drag and drop — October 6, 2026
+
+- Replaced handle-only, precise row targeting with a 350ms hold anywhere on a song except Remove. Normal movement before activation scrolls the list; an active touch drag prevents native scrolling and uses controlled edge scrolling. Mouse users can also drag the grip immediately.
+- The selected row becomes a full-height insertion gap with a floating card and position label. Neighboring rows animate into their future positions, including smooth reversals before an animation finishes. Layout centers provide broad drop regions across rows and gaps. Browser scroll anchoring is disabled only while sorting so it cannot fight edge scrolling. Reduced-motion preferences disable movement animations.
+- Order changes are previewed in the DOM and saved once on drop. Escape, native Back, outside drops, pointer/touch cancellation, additional fingers, loss of visibility/focus and account replacement cancel the operation. Cloud refresh is guarded until the gesture ends. Keyboard Space/Enter, arrow keys, Home/End and Escape support reordering with focus retention and live announcements. Reordering preserves duplicate occurrences and unresolved imported song references.
+- All 30 Node checks passed, including five new sorting geometry/membership checks. All 11 dedicated reorder checks passed at both 414px and 1280px using the shipped markup, styles and scripts. The 22 existing sync/navigation checks also passed at both widths. Verified a real mouse grip drag in the in-app browser. Reproduce the offline synthetic-data checks at `tests/ui-sort.html` and `tests/ui-sync.html` served from the repository root.
+- Windows Release and Android Debug builds passed with zero warnings/errors; Android application packaging was disabled for the build check. Touch gestures were simulated in the browser. Physical Android long-press/drag behavior remains a device acceptance check. No new release or distributable was requested or generated.

@@ -10,6 +10,47 @@ const scripts = path.join(__dirname, '../src/ChordLibrary.Shared/wwwroot/js');
 const appSource = fs.readFileSync(path.join(scripts, 'app.js'), 'utf8');
 const bridgeSource = fs.readFileSync(path.join(scripts, 'native-bridge.js'), 'utf8');
 const viewSource = fs.readFileSync(path.join(scripts, 'view-updates.js'), 'utf8');
+const sortContext = vm.createContext({ window: {} });
+vm.runInContext(fs.readFileSync(path.join(scripts, 'setlist-sort.js'), 'utf8'), sortContext);
+const sorter = sortContext.window.SetlistSort;
+
+test('sorting targets entire rows and gaps using layout centers', () => {
+  for (const [y, expected] of [[-20, 0], [49, 0], [50, 1], [99, 1], [150, 2], [400, 3]])
+    assert.equal(sorter.insertionIndex([50, 150, 250], y), expected);
+  assert.equal(sorter.insertionIndex([], 100), 0);
+});
+
+test('reorder moves up and down without mutating the original membership', () => {
+  const ids = ['a', 'b', 'c', 'd'];
+  assert.deepEqual(Array.from(sorter.reorderMembers(ids, [0, 1, 2, 3], 0, 3)), ['b', 'c', 'd', 'a']);
+  assert.deepEqual(Array.from(sorter.reorderMembers(ids, [0, 1, 2, 3], 3, 0)), ['d', 'a', 'b', 'c']);
+  assert.deepEqual(ids, ['a', 'b', 'c', 'd']);
+});
+
+test('reorder preserves unresolved songs and the selected duplicate occurrence', () => {
+  const ids = ['missing-before', 'a', 'missing-middle', 'b', 'a', 'c', 'missing-after'];
+  assert.deepEqual(Array.from(sorter.reorderMembers(ids, [1, 3, 4, 5], 2, 0)),
+    ['missing-before', 'a', 'a', 'missing-middle', 'b', 'c', 'missing-after']);
+  assert.deepEqual(Array.from(sorter.reorderMembers(ids, [1, 3, 4, 5], 0, 3)),
+    ['missing-before', 'missing-middle', 'b', 'a', 'c', 'a', 'missing-after']);
+});
+
+test('invalid or unchanged reorder leaves membership intact', () => {
+  for (const [from, to] of [[0, 0], [-1, 1], [0, 2], [0.5, 1]])
+    assert.deepEqual(Array.from(sorter.reorderMembers(['a', 'b'], [0, 1], from, to)), ['a', 'b']);
+  assert.deepEqual(Array.from(sorter.reorderMembers(['missing'], [], 0, 0)), ['missing']);
+});
+
+test('edge scrolling accelerates near edges and stops outside the content', () => {
+  assert.equal(sorter.edgeVelocity(400, 100, 700), 0);
+  assert.equal(sorter.edgeVelocity(100, 100, 700), -600);
+  assert.equal(sorter.edgeVelocity(700, 100, 700), 600);
+  assert.equal(sorter.edgeVelocity(730, 100, 700), 0);
+  assert.equal(sorter.edgeVelocity(60, 100, 700), 0);
+  assert.equal(sorter.edgeVelocity(100, 100, 100), 0);
+  assert.ok(sorter.edgeVelocity(140, 100, 700) < 0);
+  assert.ok(sorter.edgeVelocity(660, 100, 700) > 0);
+});
 
 test('all shipped JavaScript parses, including the loader dependency order', () => {
   for (const file of fs.readdirSync(scripts).filter(file => file.endsWith('.js'))) {

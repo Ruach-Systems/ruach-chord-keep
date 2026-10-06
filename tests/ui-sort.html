@@ -1,0 +1,8 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Setlist reorder checks</title>
+<style>body{font-family:system-ui;margin:16px;background:#f6f7fa}button{padding:10px;margin-right:8px}iframe{display:block;border:1px solid #888;margin-top:12px;height:740px}pre{white-space:pre-wrap}</style></head><body>
+<h1>Setlist reorder checks</h1><p>Synthetic offline data only. Touch events are simulated; physical Android validation remains separate.</p>
+<button onclick="run(1280)">Run desktop checks</button><button onclick="run(414)">Run mobile checks</button>
+<button onclick="document.getElementById('preview').contentWindow.postMessage('preview-reorder',location.origin)">Show live reorder preview</button>
+<pre id="results">Ready</pre><iframe id="preview" title="Chord Library reorder fixture"></iframe>
+<script>function run(width){const frame=document.getElementById('preview');frame.style.width=width+'px';frame.src='ui-sort-frame.html?run='+Date.now();document.getElementById('results').textContent='Running at '+width+'px…';}
+addEventListener('message',event=>{if(event.source===document.getElementById('preview').contentWindow && event.origin===location.origin)document.getElementById('results').textContent=event.data;});</script></body></html>

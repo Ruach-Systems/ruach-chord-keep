@@ -35,7 +35,7 @@
       }
     } }, settings);
     NativeBridge.configure({ native: false });
-    for (const file of ['qrcode.js', 'app.js']) await new Promise((resolve, reject) => {
+    for (const file of ['qrcode.js', 'setlist-sort.js', 'app.js']) await new Promise((resolve, reject) => {
       const script = document.createElement('script'); script.src='../src/ChordLibrary.Shared/wwwroot/js/'+file+'?fixture='+Date.now();
       script.onload=resolve;script.onerror=reject;document.body.appendChild(script);
     });
