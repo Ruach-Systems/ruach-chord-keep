@@ -1,11 +1,18 @@
 # Validation
 
+## Automated draft 1.0.6 — October 6, 2026
+
+- [Release packages run 37416308010](https://github.com/Ruach-Systems/ruach-chord-library/actions/runs/37416308010) succeeded and created an unpublished draft with the unsigned Windows x64 installer and signed Android APK. Tag `v1.0.6` points to `25bf1bfdd1b59b49ff12fdee3861a842729ee2b5`; Android build number is 7. It includes the event-driven sync and mobile editor refinements below.
+- All 148 .NET tests and 25 JavaScript checks passed. Windows/Android validation builds had zero warnings/errors. Hosted Windows installation, installed-file comparison and uninstall passed; Android v2/v3 signature verification passed.
+- Downloaded all five assets and verified SHA-256 checksums, GitHub asset digests, version/build/source metadata, Windows installer version/signature state, APK manifest/signing identity and bundled UI source. See [1.0.6 release notes](release-1.0.6.md) for hashes and remaining device acceptance checks. No hosted migration or publication was performed.
+- Release generation is allowed only on an explicit user instruction for each release. The manually dispatched workflows and repository `AGENTS.md` retain that policy.
+
 ## Event-driven refresh and mobile editing refinements — October 6, 2026
 
 - Replaced the native 25-second cloud timer with sync requests on startup, foreground/resume, restored connectivity, durable local saves/imports and explicit Refresh library. Requests coalesce and serialize, retaining one follow-up for changes saved during sync. Existing incremental checkpoints and latest-update-wins conflict behavior remain in use. Downloaded updates held behind editor/modal/undo/drag guards appear when the interaction finishes, without another cloud poll. Unchanged snapshots retain the displayed rows and sheet.
 - Added an animated hamburger/X drawer toggle and a simpler consistent setlist icon. Drawer song search now matches only title and artist. Removed the automatic first-chord Key badge while preserving transposition. Both inline and popup quick-symbol controls avoid blurring an already-focused editor, retain selection and use native text insertion where available.
 - All 28 shared Release tests passed, including scheduler serialization/coalescing/retry/disposal, reconnect signals, startup/manual incremental downloads and offline-edit upload on reconnection. All 25 Node checks passed, including durable-save ordering, manual refresh coalescing and deferred UI delivery. All 22 browser checks passed at both 414px and 1280px with the shipped assets and synthetic offline data. Quick-symbol checks verify insertion, caret and zero blur in both editors; they do not emulate an Android keyboard.
-- Windows Release, Android Debug and browser-preview Release builds passed with zero warnings/errors. Mobile screenshots are saved under `artifacts/evidence/`. No Supabase migration or hosted data changes were required. These changes require a new installed package and are not part of the existing 1.0.5 draft.
+- Windows Release, Android Debug and browser-preview Release builds passed with zero warnings/errors. Mobile screenshots are saved under `artifacts/evidence/`. No Supabase migration or hosted data changes were required. These changes are included in draft 1.0.6 and require installation of its new package; they are not part of the older 1.0.5 draft.
 - Physical Android keyboard Caps Lock, app foreground/reconnection triggers and two-device cloud behavior still require device acceptance checks. While the app remains foregrounded without local edits, another device's changes are received through Refresh library; no periodic polling or realtime subscription is active.
 
 ## Automated draft 1.0.5 — October 6, 2026
