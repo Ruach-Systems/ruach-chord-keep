@@ -25,8 +25,8 @@ public sealed class LibrarySyncState
     public Dictionary<string, long> RemoteModified { get; set; } = new(StringComparer.Ordinal);
 }
 
-/// <summary>Account-scoped durable storage. Every mutation is serialized and atomically replaces a complete profile.</summary>
-public sealed class LocalLibraryStore
+/// <summary>Account-scoped SQLite storage. Record edits and their sync state commit in one transaction.</summary>
+public sealed partial class LocalLibraryStore
 {
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> Gates = new(StringComparer.OrdinalIgnoreCase);
     private static readonly JsonSerializerOptions SerializerOptions = new() { WriteIndented = false, MaxDepth = 80 };
@@ -124,7 +124,7 @@ public sealed class LocalLibraryStore
 
     /// <summary>
     /// Resolves competing edits by updatedAt (cloud wins ties). A download checkpoint is committed
-    /// in the same atomic profile write as its record, deletion, or rebased pending upload.
+    /// in the same transaction as its record, deletion, or rebased pending upload.
     /// Upload responses must not advance it: other records can have intervening revisions.
     /// </summary>
     public Task<PendingLibraryChange?> MergeSyncRemoteAsync(string profileId, string collection, string id,
@@ -369,16 +369,9 @@ public sealed class LocalLibraryStore
         await gate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            var state = await LoadAsync(path, ct).ConfigureAwait(false);
-            var result = operation(state);
-            if (write)
-            {
-                // Downloads also change collection counts and aggregate size. Never write a profile
-                // that the next read would reject; an over-limit merge leaves the prior file intact.
-                state.Snapshot = NormalizeSnapshot(state.Snapshot);
-                await PersistAsync(path, state, ct).ConfigureAwait(false);
-            }
-            return result;
+            // Microsoft.Data.Sqlite performs synchronous I/O. Keep opening, migration, queries
+            // and commits off the MAUI/Blazor UI thread, including an uncontended first request.
+            return await Task.Run(() => WithDatabaseStateAsync(path, write, operation, ct), ct).ConfigureAwait(false);
         }
         finally { gate.Release(); }
     }
@@ -388,10 +381,10 @@ public sealed class LocalLibraryStore
         if (string.IsNullOrWhiteSpace(profileId) || profileId.Length > 512)
             throw new ArgumentException("A nonempty account profile identifier is required.", nameof(profileId));
         var digest = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(profileId))).ToLowerInvariant();
-        return Path.Combine(_directory, digest + ".json");
+        return Path.Combine(_directory, digest + ".sqlite3");
     }
 
-    private static async Task<PersistedState> LoadAsync(string path, CancellationToken ct)
+    private static async Task<PersistedState> LoadLegacyAsync(string path, CancellationToken ct)
     {
         if (!File.Exists(path)) return new PersistedState();
         if (new FileInfo(path).Length > LibraryValidation.MaximumImportBytes * 4L)
@@ -415,28 +408,6 @@ public sealed class LocalLibraryStore
         {
             throw new LibraryValidationException($"Local data could not be read; the original file was preserved. {ex.Message}");
         }
-    }
-
-    private static async Task PersistAsync(string path, PersistedState state, CancellationToken ct)
-    {
-        var temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
-        try
-        {
-            var bytes = JsonSerializer.SerializeToUtf8Bytes(state, SerializerOptions);
-            if (bytes.Length > LibraryValidation.MaximumImportBytes * 4L)
-                throw new LibraryValidationException("The local profile exceeds the supported storage limit.");
-            await using (var stream = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None,
-                64 * 1024, FileOptions.Asynchronous | FileOptions.WriteThrough))
-            {
-                await stream.WriteAsync(bytes, ct).ConfigureAwait(false);
-                await stream.FlushAsync(ct).ConfigureAwait(false);
-                stream.Flush(flushToDisk: true);
-            }
-            ct.ThrowIfCancellationRequested();
-            if (File.Exists(path)) File.Replace(temporary, path, path + ".bak");
-            else File.Move(temporary, path);
-        }
-        finally { if (File.Exists(temporary)) File.Delete(temporary); }
     }
 
     private static JsonObject ValidateRemote(string collection, string id, JsonObject payload, bool deleted)

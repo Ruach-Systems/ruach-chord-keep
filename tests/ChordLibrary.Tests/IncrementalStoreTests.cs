@@ -46,7 +46,7 @@ public sealed partial class LocalLibraryStoreTests
     public async Task FailedRemoteValidationLeavesSnapshotAndCheckpointUnchanged()
     {
         await Store.MergeSyncRemoteAsync("user:alice", "songs", "a", Song("a", "First"), false, 1, checkpoint: true);
-        var file = Assert.Single(Directory.GetFiles(_directory, "*.json"));
+        var file = Assert.Single(Directory.GetFiles(_directory, "*.sqlite3"));
         var before = await File.ReadAllBytesAsync(file);
         var invalid = Song("b", "Invalid"); invalid["transposeSteps"] = 99;
         await Assert.ThrowsAsync<LibraryValidationException>(() => Store.MergeSyncRemoteAsync("user:alice", "songs", "b", invalid, false, 2, checkpoint: true));
@@ -57,13 +57,11 @@ public sealed partial class LocalLibraryStoreTests
     [Fact]
     public async Task LegacyProfilesStartWithoutCheckpointRatherThanGuessingFromUploadRevisions()
     {
-        await Store.ImportAsync("user:alice", Backup("a", "Legacy"));
-        var pending = Assert.Single((await Store.ReadSyncStateAsync("user:alice")).PendingChanges);
-        await Store.AcknowledgeAsync("user:alice", "songs", "a", pending.LocalVersion, 100);
-        var file = Assert.Single(Directory.GetFiles(_directory, "*.json"));
-        var json = JsonNode.Parse(await File.ReadAllTextAsync(file))!.AsObject();
-        json.Remove("DownloadCursors"); json.Remove("RemoteModified");
-        await File.WriteAllTextAsync(file, json.ToJsonString());
+        await WriteLegacyAsync("user:alice", new JsonObject {
+            ["SchemaVersion"] = 1,
+            ["Snapshot"] = new JsonObject { [LibraryStorageKeys.Songs] = new JsonArray(Song("a", "Legacy")).ToJsonString(), [LibraryStorageKeys.Setlists] = "[]" },
+            ["RemoteRevisions"] = new JsonObject { ["songs:a"] = 100 }
+        });
         var reopened = await Store.ReadSyncStateAsync("user:alice");
         Assert.Empty(reopened.DownloadCursors);
         Assert.Equal(100, reopened.RemoteRevisions["songs:a"]);

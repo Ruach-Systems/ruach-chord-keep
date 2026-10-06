@@ -431,6 +431,41 @@ public sealed class AppSessionTests : IDisposable
         Assert.Empty((await app.Store.ReadSyncStateAsync(app.ProfileId)).PendingChanges);
     }
 
+    [Fact]
+    public async Task JsonAccountUpgradeKeepsPendingUploadAndIncrementalCheckpointAcrossSyncAndRestart()
+    {
+        var app = await SignedAppAsync();
+        var project = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(app.Options!.Validate().AbsoluteUri)));
+        var profileHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(app.ProfileId))).ToLowerInvariant();
+        var legacyPath = Path.Combine(directory, "projects", project, profileHash + ".json");
+        var local = Song("a", "Offline before upgrade"); local["updatedAt"] = 10;
+        var normalized = LibraryValidation.ValidateRecord(local, "songs");
+        var legacy = new JsonObject {
+            ["SchemaVersion"] = 1, ["Snapshot"] = new JsonObject { [LibraryStorageKeys.Songs] = new JsonArray(normalized.DeepClone()).ToJsonString(), [LibraryStorageKeys.Setlists] = "[]" },
+            ["PendingChanges"] = new JsonObject { ["songs:a"] = new JsonObject { ["Collection"] = "songs", ["Id"] = "a", ["Payload"] = normalized,
+                ["Deleted"] = false, ["ExpectedRevision"] = 1, ["LocalVersion"] = "original-offline-version" } },
+            ["RemoteRevisions"] = new JsonObject { ["songs:a"] = 1 }, ["RemoteModified"] = new JsonObject { ["songs:a"] = 1 },
+            ["DownloadCursors"] = new JsonObject { ["songs"] = 1 }
+        }.ToJsonString();
+        await File.WriteAllTextAsync(legacyPath, legacy);
+        server.Put(Alpha, "songs", Song("a", "Old cloud title"), 1);
+        server.Put(Alpha, "songs", Song("b", "New cloud song"), 2);
+        var initial = LibraryDocument.FromSnapshot(await app.ReadInitialAsync());
+        Assert.Equal("Offline before upgrade", Title(initial, "a"));
+        Assert.Equal("original-offline-version", Assert.Single((await app.Store.ReadSyncStateAsync(app.ProfileId)).PendingChanges).LocalVersion);
+        var result = await app.SyncAsync();
+        Assert.Equal(1, result.Pulled); Assert.Equal(1, result.Uploaded); Assert.Equal(0, result.Remaining);
+        Assert.Equal("Offline before upgrade", server.Get(Alpha, "songs", "a")["payload"]!["title"]!.GetValue<string>());
+        Assert.Equal(2, (await app.Store.ReadSyncStateAsync(app.ProfileId)).DownloadCursors["songs"]);
+        var restarted = new AppSession(platform, secrets, http); await restarted.InitializeAsync();
+        var ui = await restarted.ReadInitialAsync(); Assert.Equal(2, LibraryDocument.FromSnapshot(ui).Songs.Count);
+        await restarted.SaveAsync(Edit(ui, "a", "Edited after upgrade"));
+        Assert.Equal(3, Assert.Single((await restarted.Store.ReadSyncStateAsync(restarted.ProfileId)).PendingChanges).ExpectedRevision);
+        Assert.Equal(0, (await restarted.SyncAsync()).Remaining);
+        Assert.Equal(legacy, await File.ReadAllTextAsync(legacyPath));
+        Assert.True(File.Exists(Path.ChangeExtension(legacyPath, ".sqlite3")));
+    }
+
     private static Dictionary<string, string> Edit(Dictionary<string, string> snapshot, string id, string title)
     {
         var result = new Dictionary<string, string>(snapshot);

@@ -1,5 +1,13 @@
 # Validation
 
+## Relational SQLite local storage — October 6, 2026
+
+- Windows and Android now use a separate SQLite database per guest/account/project profile in the existing app data directory. Songs and setlists have typed columns; ordered membership, preferences, pending uploads, remote revisions/tombstones and download checkpoints have separate tables. Only changed rows are written. The compatible UI snapshots and Supabase API are unchanged.
+- First profile access automatically validates and imports the old JSON in one transaction, preserving record IDs, chord whitespace, unknown fields, repeated/unresolved references, preferences, pending operation versions and download checkpoints. The original JSON and existing `.bak` remain untouched; successful migrations are never replayed. Failed migrations roll back schema/data and remain retryable. Unsupported versions, wrong profile identities and corrupt files are reported without resetting the library.
+- All 159 .NET tests passed: 65 Core, 29 shared session, 7 native scanner and 58 Supabase transport/auth. All 25 JavaScript checks passed. The final Core/shared Release runs cover transactional JSON upgrade, a subsequent incremental download/upload and restart, failed-write rollback of records/outbox/checkpoints, changed-row-only saves, setlist reorder, malformed migration, cancellation, account isolation and concurrent saves. Tests use synthetic temporary profiles, not installed user data.
+- Windows Release, Android Debug and browser-preview Release builds passed with zero warnings/errors. Windows includes `e_sqlite3.dll`; the Android validation output includes `libe_sqlite3.so` for ARM64 and x64. `git diff --check` passed and no unmerged paths were found.
+- No installed private library was migrated during these checks. On-device upgrade, offline editing, restart, export and reconnect acceptance remain to be exercised with the next explicitly requested package. No Supabase schema change or new release/draft was generated. Draft 1.0.6 still uses JSON local storage.
+
 ## Automated draft 1.0.6 — October 6, 2026
 
 - [Release packages run 37416308010](https://github.com/Ruach-Systems/ruach-chord-library/actions/runs/37416308010) succeeded and created an unpublished draft with the unsigned Windows x64 installer and signed Android APK. Tag `v1.0.6` points to `25bf1bfdd1b59b49ff12fdee3861a842729ee2b5`; Android build number is 7. It includes the event-driven sync and mobile editor refinements below.

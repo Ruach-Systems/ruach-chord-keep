@@ -100,7 +100,7 @@ public sealed partial class LocalLibraryStoreTests : IDisposable
     public async Task CorruptProfileIsPreservedAndNeverSilentlyReset()
     {
         await Store.ImportAsync("guest", Backup("a", "Keep"));
-        var file = Assert.Single(Directory.GetFiles(_directory, "*.json"));
+        var file = Assert.Single(Directory.GetFiles(_directory, "*.sqlite3"));
         await File.WriteAllTextAsync(file, "broken");
         await Assert.ThrowsAsync<LibraryValidationException>(() => Store.ImportAsync("guest", Backup("b", "New")));
         Assert.Equal("broken", await File.ReadAllTextAsync(file));
@@ -220,7 +220,7 @@ public sealed partial class LocalLibraryStoreTests : IDisposable
                 .Select(i => Song("song-" + i, "Song " + i)).ToList()
         };
         await Store.SaveDocumentAsync("user:alice", library);
-        var file = Assert.Single(Directory.GetFiles(_directory, "*.json"));
+        var file = Assert.Single(Directory.GetFiles(_directory, "*.sqlite3"));
         var before = await File.ReadAllBytesAsync(file);
 
         await Assert.ThrowsAsync<LibraryValidationException>(() => Store.AcceptRemoteAsync("user:alice", "songs",
