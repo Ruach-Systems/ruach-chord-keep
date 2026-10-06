@@ -274,6 +274,7 @@
     replaceSnapshot,
     registerAppLifecycle(callbacks) { appLifecycle = callbacks; },
     handleBack() { return appLifecycle?.handleBack ? appLifecycle.handleBack() : true; },
+    dismissConfirmation() { return appLifecycle?.dismissConfirmation?.() ?? false; },
     canSwitchAccount() { return appLifecycle ? appLifecycle.canSwitchAccount() : true; },
     canRefresh() {
       return revision === savedRevision && !saving &&

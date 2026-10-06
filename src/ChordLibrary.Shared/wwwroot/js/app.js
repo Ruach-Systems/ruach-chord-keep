@@ -96,6 +96,7 @@
   let inlineEditDraft = '';
   let editingSetlistId = null;
   let confirmCallback = null;
+  let confirmCancelCallback = null;
   let currentFontSize = 14; // Default font size for chord content
   let viewingFromSetlistId = null; // Track which setlist we're viewing from (for auto-add)
   let undoTimer = null;
@@ -993,7 +994,7 @@
   }
 
   function returnToSetlist() {
-    if (!selectedSetlistId || !requestDiscardInlineEdit()) return;
+    if (!selectedSetlistId || !requestDiscardInlineEdit(returnToSetlist)) return;
     const previous = navigationHistory[navigationHistory.length - 1];
     if (previous && !previous.songId && previous.setlistId === selectedSetlistId) {
       navigationHistory.pop();
@@ -1021,9 +1022,11 @@
     const modal = modalLayers.slice().reverse().find(visible);
     if (modal) {
       if (modal === dom.songModal) {
-        if (songFormValues() === songFormBaseline || window.confirm('Discard your unsaved song changes?')) closeSongModal();
+        if (songFormValues() === songFormBaseline) closeSongModal();
+        else requestDiscardChanges('Your song has unsaved changes. Discard them and close the editor?', closeSongModal);
       } else if (modal === dom.setlistModal) {
-        if (setlistFormValues() === setlistFormBaseline || window.confirm('Discard your unsaved setlist changes?')) closeSetlistModal();
+        if (setlistFormValues() === setlistFormBaseline) closeSetlistModal();
+        else requestDiscardChanges('Your setlist has unsaved changes. Discard them and close the editor?', closeSetlistModal);
       } else if (modal === dom.confirmModal) closeConfirmModal();
       else if (modal === dom.addSongsModal) closeAddSongsModal();
       else if (modal === dom.shareQrModal) closeShareQrModal();
@@ -1035,7 +1038,7 @@
     if (dropdown?.classList.contains('visible')) { dropdown.classList.remove('visible'); return true; }
     if (dom.sidebar.classList.contains('open')) { closeSidebar(); return true; }
     if (inlineEditingSongId) {
-      if (requestDiscardInlineEdit()) renderSongDetail();
+      if (requestDiscardInlineEdit(renderSongDetail)) renderSongDetail();
       return true;
     }
     while (navigationHistory.length) {
@@ -1048,7 +1051,7 @@
   }
 
   function goHome() {
-    if (!requestDiscardInlineEdit()) return;
+    if (!requestDiscardInlineEdit(goHome)) return;
     navigationHistory = [];
     selectedSongId = null;
     selectedSetlistId = null;
@@ -1121,7 +1124,7 @@
   // ================================================
 
   function selectSong(id, fromSetlist = false, index = -1) {
-    if (id !== inlineEditingSongId && !requestDiscardInlineEdit()) return;
+    if (id !== inlineEditingSongId && !requestDiscardInlineEdit(() => selectSong(id, fromSetlist, index))) return;
     if (selectedSongId !== id || (!fromSetlist && selectedSetlistId) || viewingSetlistSongIndex !== index)
       rememberNavigation();
     selectedSongId = id;
@@ -1155,7 +1158,7 @@
 
   function openSongModal(songId = null) {
     const wasInlineEditing = Boolean(inlineEditingSongId);
-    if (!requestDiscardInlineEdit()) return;
+    if (!requestDiscardInlineEdit(() => { renderSongDetail(); openSongModal(songId); })) return;
     if (wasInlineEditing && selectedSongId) {
       renderSongDetail();
       announce('Inline editing cancelled');
@@ -1323,7 +1326,7 @@
   // ================================================
 
   function selectSetlist(id) {
-    if (!requestDiscardInlineEdit()) return;
+    if (!requestDiscardInlineEdit(() => selectSetlist(id))) return;
     if (selectedSetlistId !== id || selectedSongId) rememberNavigation();
     selectedSetlistId = id;
     selectedSongId = null;
@@ -1678,24 +1681,43 @@
   // Confirm Modal
   // ================================================
 
-  function openConfirmModal(message, callback, { title = 'Confirm Delete', action = 'Delete' } = {}) {
+  function openConfirmModal(message, callback, { title = 'Confirm Delete', action = 'Delete', cancel = 'Cancel', onCancel = null, discard = false } = {}) {
+    if (!dom.confirmModal.classList.contains('hidden')) return;
     $('confirm-title').textContent = title;
     $('btn-confirm-delete').textContent = action;
+    $('btn-cancel-confirm').textContent = cancel;
+    $('confirm-symbol').classList.toggle('hidden', !discard);
+    dom.confirmModal.classList.toggle('is-discard-confirm', discard);
     dom.confirmMessage.textContent = message;
     confirmCallback = callback;
+    confirmCancelCallback = onCancel;
     openModalWithFocusTrap(dom.confirmModal);
   }
 
-  function closeConfirmModal() {
-    closeModalWithFocusTrap(dom.confirmModal);
+  function closeConfirmModal(confirmed = false) {
+    const canceled = confirmCancelCallback;
     confirmCallback = null;
+    confirmCancelCallback = null;
+    closeModalWithFocusTrap(dom.confirmModal);
+    if (confirmed !== true) canceled?.();
   }
 
   function executeConfirm() {
-    if (confirmCallback) {
-      confirmCallback();
-    }
+    const callback = confirmCallback;
+    closeConfirmModal(true);
+    callback?.();
+  }
+
+  function requestDiscardChanges(message, onDiscard, onCancel = null) {
+    openConfirmModal(message, onDiscard, {
+      title: 'Discard unsaved changes?', action: 'Discard changes', cancel: 'Keep editing', onCancel, discard: true
+    });
+  }
+
+  function dismissConfirmation() {
+    if (dom.confirmModal.classList.contains('hidden')) return false;
     closeConfirmModal();
+    return true;
   }
 
   // ================================================
@@ -2293,32 +2315,34 @@
     return handler; // return so we can remove it later
   }
 
-  let activeFocusTrapHandler = null;
-  let previouslyFocusedElement = null;
+  const modalFocusStates = new WeakMap();
 
   function openModalWithFocusTrap(modalEl) {
     modalLayers = modalLayers.filter(layer => layer !== modalEl);
     modalLayers.push(modalEl);
-    previouslyFocusedElement = document.activeElement;
+    const content = modalEl.querySelector('.modal-content');
+    const previous = modalFocusStates.get(modalEl);
+    if (previous?.handler) content.removeEventListener('keydown', previous.handler);
+    const focusState = { previous: document.activeElement, handler: null };
+    modalFocusStates.set(modalEl, focusState);
     modalEl.classList.remove('hidden');
     // Small delay to allow DOM to render
     setTimeout(() => {
-      if (modalEl.classList.contains('hidden') || modalLayers[modalLayers.length - 1] !== modalEl) return;
-      activeFocusTrapHandler = trapFocus(modalEl.querySelector('.modal-content'));
+      if (modalEl.classList.contains('hidden') || modalLayers[modalLayers.length - 1] !== modalEl || modalFocusStates.get(modalEl) !== focusState) return;
+      focusState.handler = trapFocus(content);
     }, 50);
   }
 
   function closeModalWithFocusTrap(modalEl) {
     modalLayers = modalLayers.filter(layer => layer !== modalEl);
     modalEl.classList.add('hidden');
-    if (activeFocusTrapHandler && modalEl.querySelector('.modal-content')) {
-      modalEl.querySelector('.modal-content').removeEventListener('keydown', activeFocusTrapHandler);
-      activeFocusTrapHandler = null;
-    }
-    if (previouslyFocusedElement) {
-      previouslyFocusedElement.focus();
-      previouslyFocusedElement = null;
-    }
+    const focusState = modalFocusStates.get(modalEl);
+    modalFocusStates.delete(modalEl);
+    if (focusState?.handler) modalEl.querySelector('.modal-content').removeEventListener('keydown', focusState.handler);
+    if (focusState?.previous?.isConnected) focusState.previous.focus({ preventScroll: true });
+    const parentModal = modalLayers[modalLayers.length - 1];
+    const parentFocus = parentModal && modalFocusStates.get(parentModal);
+    if (parentFocus && !parentFocus.handler) parentFocus.handler = trapFocus(parentModal.querySelector('.modal-content'));
     NativeBridge.notifyUiReady?.();
   }
 
@@ -2560,7 +2584,7 @@
   }
 
   function cancelContentEditableInlineEdit() {
-    if (!requestDiscardInlineEdit()) return;
+    if (!requestDiscardInlineEdit(cancelContentEditableInlineEdit)) return;
     renderSongDetail();
     announce('Direct editing cancelled');
     dom.inlineEditButton.focus();
@@ -2589,13 +2613,33 @@
     dom.inlineEditButton.focus();
   }
 
-  function requestDiscardInlineEdit() {
+  function requestDiscardInlineEdit(onDiscard, onCancel = null) {
     if (!inlineEditingSongId) return true;
     const song = songs.find(s => s.id === inlineEditingSongId);
     if (inlineEditingMode === 'contenteditable') updateContentEditableDraft();
     const draft = inlineEditingMode === 'contenteditable' ? inlineEditDraft : dom.inlineSongContent.value;
     const hasChanges = song && draft !== song.content;
-    if (hasChanges && !window.confirm('Discard your unsaved chord changes?')) return false;
+    if (hasChanges) {
+      const editor = inlineEditingMode === 'contenteditable' ? dom.songContent : dom.inlineSongContent;
+      const selection = window.getSelection();
+      const savedRange = editor.isContentEditable && selection?.rangeCount && editor.contains(selection.getRangeAt(0).commonAncestorContainer)
+        ? selection.getRangeAt(0).cloneRange() : null;
+      const start = editor.selectionStart, end = editor.selectionEnd;
+      const editingId = inlineEditingSongId;
+      requestDiscardChanges('Your chord sheet has unsaved changes. Discard them and return to the saved version?', () => {
+        finishInlineEditState();
+        onDiscard?.();
+      }, () => {
+        if (onCancel) { onCancel(); return; }
+        if (inlineEditingSongId !== editingId) return;
+        editor.focus({ preventScroll: true });
+        if (savedRange && editor.contains(savedRange.commonAncestorContainer)) {
+          selection.removeAllRanges();
+          selection.addRange(savedRange);
+        } else if (!editor.isContentEditable) editor.setSelectionRange(start, end);
+      });
+      return false;
+    }
 
     finishInlineEditState();
     return true;
@@ -2635,6 +2679,7 @@
     dom.contentEditableActions.classList.add('hidden');
     dom.contentEditableCharButtons.classList.add('hidden');
     dom.contentEditableHighlight.classList.add('hidden');
+    $('inline-chord-palette').classList.add('hidden');
     dom.songContentSection.style.removeProperty('--inline-editor-top');
     dom.songContentSection.style.removeProperty('--inline-editor-left');
     dom.songContentSection.style.removeProperty('--inline-editor-right');
@@ -2653,7 +2698,7 @@
   }
 
   function cancelInlineEdit() {
-    if (!requestDiscardInlineEdit()) return;
+    if (!requestDiscardInlineEdit(cancelInlineEdit)) return;
     renderSongDetail();
     announce('Inline editing cancelled');
     dom.inlineEditButton.focus();
@@ -3212,6 +3257,7 @@
     document.addEventListener('keydown', (e) => {
       // Close modals on Escape (except song modal to prevent accidental loss of input)
       if (e.key === 'Escape') {
+        if (dismissConfirmation()) { e.preventDefault(); return; }
         closeSongActionsMenu();
         // Song modal is excluded - only Cancel and Save buttons close it
         if (!dom.setlistModal.classList.contains('hidden')) closeSetlistModal();
@@ -3430,16 +3476,23 @@
     updatePreferencesUI();
   }
 
-  function canSwitchNativeAccount() {
-    if (!requestDiscardInlineEdit()) return false;
+  async function canSwitchNativeAccount() {
+    if (!dom.confirmModal.classList.contains('hidden')) return false;
+    const leaveInline = await new Promise(resolve => {
+      if (requestDiscardInlineEdit(() => resolve(true), () => resolve(false))) resolve(true);
+    });
+    if (!leaveInline) return false;
     const hasSongForm = !dom.songModal.classList.contains('hidden') &&
-      (dom.songTitleInput.value || dom.songArtistInput.value || dom.songContentInput.value);
+      songFormValues() !== songFormBaseline;
     const hasSetlistForm = !dom.setlistModal.classList.contains('hidden') &&
-      (dom.setlistNameInput.value || dom.setlistDescriptionInput.value);
-    if ((hasSongForm || hasSetlistForm) &&
-      !window.confirm('Discard the open form before changing accounts?')) {
-      if (selectedSongId) renderSongDetail();
-      return false;
+      setlistFormValues() !== setlistFormBaseline;
+    if (hasSongForm || hasSetlistForm) {
+      const leaveForm = await new Promise(resolve => requestDiscardChanges(
+        'The open editor has unsaved changes. Discard them before changing accounts?', () => resolve(true), () => resolve(false)));
+      if (!leaveForm) {
+        if (selectedSongId) renderSongDetail();
+        return false;
+      }
     }
     if (selectedSongId) renderSongDetail();
     return true;
@@ -3548,6 +3601,7 @@
   function init() {
     NativeBridge.registerAppLifecycle({
       handleBack: handleAppBack,
+      dismissConfirmation,
       canSwitchAccount: canSwitchNativeAccount,
       canRefresh: canRefreshNativeSnapshot,
       resetForAccount: resetNativeAccount,

@@ -118,6 +118,7 @@
         await InvokeAsync(async () =>
         {
             if (authWait is not null) { authWait.Cancel(); return; }
+            if (ready && await JS.InvokeAsync<bool>("NativeBridge.dismissConfirmation")) return;
             if (busy || !ready) return;
             if (preview is not null) { CancelImport(); StateHasChanged(); return; }
             if (accountOpen) { CloseAccount(); StateHasChanged(); return; }

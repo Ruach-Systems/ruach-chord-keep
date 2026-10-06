@@ -2579,6 +2579,16 @@ body:has(.sidebar.open) .fab {
   text-align: center;
 }
 
+#confirm-modal { z-index: 21000; }
+#confirm-modal.is-discard-confirm { align-items: center; padding: 16px; }
+#confirm-modal.is-discard-confirm .modal-confirm { max-width: 440px; padding: 24px; border-radius: 20px; text-align: left; }
+.confirm-symbol { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin-bottom: 16px; border-radius: 12px; background: var(--accent-dim); color: var(--accent); }
+.confirm-symbol svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+.is-discard-confirm #confirm-message { color: var(--text-secondary); line-height: 1.6; margin: 8px 0 24px; }
+.is-discard-confirm .modal-actions { gap: 10px; margin: 0; }
+.is-discard-confirm .modal-actions .btn { padding: 12px 8px; min-height: 44px; font-size: 14px; }
+.is-discard-confirm #btn-cancel-confirm { border: 1px solid var(--border-color); }
+
 .modal-title {
   font-size: var(--font-size-lg);
   font-weight: 600;

@@ -176,8 +176,7 @@
       textarea.setSelectionRange(0,2); tap(document.querySelector('#song-modal [data-pair="[]"]'));
       assert(textarea.value === '[C#]G' && textarea.selectionStart === 3 && blurs === 0, 'Textarea pair insertion reset focus or caret');
       textarea.removeEventListener('blur', countBlur);
-      const realConfirm = window.confirm; window.confirm = () => true;
-      try { byId('btn-cancel-song').click(); } finally { window.confirm = realConfirm; }
+      byId('btn-cancel-song').click();
       button('home-songs-list','song-0').click(); await settled();
       assert(!byId('song-key-info') && !byId('key-badge'), 'Automatic key identifier remains');
       byId('btn-inline-edit').click(); await settled();
@@ -192,8 +191,7 @@
       tap(document.querySelector('[data-inline-pair="[]"]'));
       assert(editor.textContent === '[C#G]' && blurs === 0 && document.activeElement === editor, 'Inline pair reset focus');
       editor.removeEventListener('blur', countBlur);
-      window.confirm = () => true;
-      try { NativeBridge.handleBack(); } finally { window.confirm = realConfirm; }
+      NativeBridge.handleBack(); byId('btn-confirm-delete').click();
       await reset();
     });
     await check('older WebViews preserve focus and scroll without moveBefore', async () => {
@@ -314,33 +312,72 @@
     });
     await check('Back protects unsaved song and setlist forms and inline chords', async () => {
       await reset();
-      const realConfirm = window.confirm; let allow = false; let prompts = 0;
-      window.confirm = () => { prompts++; return allow; };
-      try {
         byId('btn-add-song').click(); await settled();
         byId('song-title-input').value = 'Unsaved song';
         assert(NativeBridge.handleBack(), 'Dirty form Back not consumed');
+        assert(!byId('confirm-modal').classList.contains('hidden'), 'Branded prompt missing');
+        byId('btn-cancel-confirm').click();
         assert(!byId('song-modal').classList.contains('hidden'), 'Canceled discard lost the form');
         assert(byId('song-title-input').value === 'Unsaved song', 'Draft lost');
-        allow = true; NativeBridge.handleBack(); await settled();
+        const formSave=byId('song-form').querySelector('button[type="submit"]');formSave.focus();
+        formSave.dispatchEvent(new KeyboardEvent('keydown',{key:'Tab',bubbles:true,cancelable:true}));
+        assert(document.activeElement===byId('btn-close-song-modal'),'Nested discard broke parent focus trap');
+        NativeBridge.handleBack(); byId('btn-confirm-delete').click(); await settled();
         assert(byId('song-modal').classList.contains('hidden'), 'Accepted discard did not close form');
         button('home-setlists-list','set').click(); await settled();
         byId('btn-edit-setlist').click(); await settled();
-        byId('setlist-name-input').value = 'Unsaved set'; allow = false;
+        byId('setlist-name-input').value = 'Unsaved set';
         NativeBridge.handleBack();
+        document.dispatchEvent(new KeyboardEvent('keydown', {key:'Escape',bubbles:true,cancelable:true}));
         assert(!byId('setlist-modal').classList.contains('hidden'), 'Canceled setlist discard lost form');
-        allow = true; NativeBridge.handleBack(); await settled();
+        assert(byId('setlist-name-input').value === 'Unsaved set', 'Escape lost setlist draft');
+        NativeBridge.handleBack(); byId('btn-confirm-delete').click(); await settled();
         byId('setlist-songs').querySelector('.setlist-song-open').click(); await settled();
         byId('btn-inline-edit').click(); await settled();
         byId('song-content').textContent = 'Unsaved chords';
         byId('song-content').dispatchEvent(new Event('input', { bubbles: true }));
-        allow = false; NativeBridge.handleBack();
+        NativeBridge.handleBack();
+        assert(byId('btn-cancel-confirm').textContent === 'Keep editing' && byId('btn-confirm-delete').textContent === 'Discard changes', 'Discard actions unclear');
+        assert(NativeBridge.handleBack(), 'Prompt Back not consumed');
         assert(byId('song-content').isContentEditable, 'Canceled chord discard ended edit');
-        allow = true; NativeBridge.handleBack(); await settled();
+        assert(byId('song-content').textContent === 'Unsaved chords', 'Prompt Back lost draft');
+        NativeBridge.handleBack(); byId('btn-confirm-delete').click(); await settled();
         assert(!byId('song-content').isContentEditable, 'Accepted chord discard did not end edit');
         assert(!byId('song-detail').classList.contains('hidden'), 'Editor Back navigated away from song');
-        assert(prompts >= 6, 'Expected discard prompts were bypassed');
-      } finally { window.confirm = realConfirm; }
+        assert(byId('inline-chord-palette').classList.contains('hidden'), 'Palette remains after discard');
+    });
+    await check('branded discard defers navigation and resumes only the confirmed action', async () => {
+      await reset();button('home-songs-list','song-0').click();await settled();byId('btn-inline-edit').click();await settled();
+      const editor=byId('song-content');editor.textContent='Draft chords';editor.dispatchEvent(new Event('input',{bubbles:true}));editor.focus();
+      const range=document.createRange();range.setStart(editor.firstChild,5);range.collapse(true);getSelection().removeAllRanges();getSelection().addRange(range);
+      byId('btn-cancel-content-edit').click();await settled();
+      assert(!NativeBridge.canRefresh(),'Refresh allowed during discard');
+      byId('btn-cancel-confirm').click();await settled();
+      assert(editor.isContentEditable && editor.textContent==='Draft chords','Keep editing changed draft');
+      assert(document.activeElement===editor && getSelection().anchorOffset===5,'Keep editing lost editor focus/caret');
+      editor.focus();byId('btn-home').click();
+      assert(!byId('song-detail').classList.contains('hidden'),'Navigated before confirmation');
+      byId('btn-confirm-delete').click();await settled();
+      assert(!byId('empty-state').classList.contains('hidden') && byId('song-detail').classList.contains('hidden'),'Confirmed Home did not resume');
+      assert(JSON.parse(LibraryStorage.getItem('chord-library-songs'))[0].content===songs[0].content,'Discard saved draft');
+    });
+    await check('account change waits for branded confirmation and cancellation settles the request', async () => {
+      await reset();button('home-songs-list','song-0').click();await settled();byId('btn-inline-edit').click();await settled();
+      const editor=byId('song-content');editor.textContent='Account draft';editor.dispatchEvent(new Event('input',{bubbles:true}));
+      let completed=false;const canceled=NativeBridge.canSwitchAccount().then(value=>{completed=true;return value;});
+      await settled();assert(!completed,'Account changed before decision');
+      assert(await NativeBridge.canSwitchAccount()===false,'Repeated account request replaced pending decision');
+      assert(NativeBridge.dismissConfirmation(),'Native Back could not cancel account prompt');
+      assert(await canceled===false && editor.isContentEditable && editor.textContent==='Account draft','Cancel lost draft or hung account action');
+      const allowed=NativeBridge.canSwitchAccount();await settled();byId('btn-confirm-delete').click();
+      assert(await allowed===true && !editor.isContentEditable,'Accepted account change did not resume');
+      byId('btn-add-song').click();await settled();
+      assert(await NativeBridge.canSwitchAccount()===true,'Unchanged form showed a discard prompt');
+      byId('song-title-input').value='Account form draft';
+      const canceledForm=NativeBridge.canSwitchAccount();await settled();NativeBridge.dismissConfirmation();
+      assert(await canceledForm===false && byId('song-title-input').value==='Account form draft','Form cancellation lost draft or hung');
+      const allowedForm=NativeBridge.canSwitchAccount();await settled();byId('btn-confirm-delete').click();
+      assert(await allowedForm===true,'Accepted form account change did not resume');
     });
     await check('Back skips remotely deleted history and account changes clear navigation', async () => {
       await reset(); button('home-songs-list','song-0').click(); await settled();
