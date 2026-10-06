@@ -1,12 +1,19 @@
 # Validation
 
+## Automated draft 1.0.7 — October 6, 2026
+
+- [Release packages run 37432177932](https://github.com/Ruach-Systems/ruach-chord-library/actions/runs/37432177932) succeeded and created an unpublished draft with the unsigned Windows x64 installer and signed Android APK. Tag `v1.0.7` points to `a9fcb1654de4a5f3e32ab6b6f86dc9c2dbee4d0f`; Android build number is 8. This release includes the relational SQLite storage and automatic native JSON upgrade below.
+- All 159 .NET tests and 25 JavaScript checks passed. Windows/Android validation builds had zero warnings/errors. Hosted Windows installation, installed-file comparison and uninstall passed; Android v2/v3 signature verification passed.
+- Downloaded all five assets and verified their SHA-256 checksums, GitHub digests, tag/build metadata, Windows installer version/unsigned state, APK manifest and unchanged Android signing identity. SQLite native runtimes are present in the APK for ARM64 and x64. The local installer-version comparison trims padding in its resource string; the reported product version is 1.0.7. See [1.0.7 release notes](release-1.0.7.md) for hashes and upgrade acceptance checks.
+- No hosted migration or publication was performed. Physical-device upgrade and two-device synchronization remain acceptance checks. Future release generation still requires a new explicit instruction.
+
 ## Relational SQLite local storage — October 6, 2026
 
 - Windows and Android now use a separate SQLite database per guest/account/project profile in the existing app data directory. Songs and setlists have typed columns; ordered membership, preferences, pending uploads, remote revisions/tombstones and download checkpoints have separate tables. Only changed rows are written. The compatible UI snapshots and Supabase API are unchanged.
 - First profile access automatically validates and imports the old JSON in one transaction, preserving record IDs, chord whitespace, unknown fields, repeated/unresolved references, preferences, pending operation versions and download checkpoints. The original JSON and existing `.bak` remain untouched; successful migrations are never replayed. Failed migrations roll back schema/data and remain retryable. Unsupported versions, wrong profile identities and corrupt files are reported without resetting the library.
 - All 159 .NET tests passed: 65 Core, 29 shared session, 7 native scanner and 58 Supabase transport/auth. All 25 JavaScript checks passed. The final Core/shared Release runs cover transactional JSON upgrade, a subsequent incremental download/upload and restart, failed-write rollback of records/outbox/checkpoints, changed-row-only saves, setlist reorder, malformed migration, cancellation, account isolation and concurrent saves. Tests use synthetic temporary profiles, not installed user data.
 - Windows Release, Android Debug and browser-preview Release builds passed with zero warnings/errors. Windows includes `e_sqlite3.dll`; the Android validation output includes `libe_sqlite3.so` for ARM64 and x64. `git diff --check` passed and no unmerged paths were found.
-- No installed private library was migrated during these checks. On-device upgrade, offline editing, restart, export and reconnect acceptance remain to be exercised with the next explicitly requested package. No Supabase schema change or new release/draft was generated. Draft 1.0.6 still uses JSON local storage.
+- No installed private library was migrated during these implementation checks. On-device upgrade, offline editing, restart, export and reconnect acceptance remain to be exercised with draft 1.0.7. No Supabase schema change was needed. Draft 1.0.6 still uses JSON local storage.
 
 ## Automated draft 1.0.6 — October 6, 2026
 
