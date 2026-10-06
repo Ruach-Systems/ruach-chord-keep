@@ -923,27 +923,22 @@
       <li class="setlist-song-item" data-id="${escapeHtml(String(song.id))}" data-index="${index}" style="animation-delay:${index * 40}ms">
         <button class="drag-handle" type="button" aria-label="Move ${escapeHtml(song.title)}" aria-pressed="false"
           aria-describedby="setlist-sort-instructions" title="Drag, or press Space to reorder">
+          <span class="setlist-song-number" aria-hidden="true">${index + 1}</span>
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-            <circle cx="8" cy="7" r="1.5"></circle><circle cx="16" cy="7" r="1.5"></circle>
-            <circle cx="8" cy="12" r="1.5"></circle><circle cx="16" cy="12" r="1.5"></circle>
-            <circle cx="8" cy="17" r="1.5"></circle><circle cx="16" cy="17" r="1.5"></circle>
+            <path d="M6 9h12M6 15h12"></path>
           </svg>
         </button>
         <button class="setlist-song-open" type="button" aria-label="Open ${escapeHtml(song.title)}">
-          <span class="setlist-song-number" aria-hidden="true">${index + 1}</span>
           <span class="setlist-song-info">
             <strong class="setlist-song-title">${escapeHtml(song.title)}</strong>
             ${song.artist ? `<span class="setlist-song-artist">${escapeHtml(song.artist)}</span>` : ''}
           </span>
-          <svg class="setlist-song-chevron" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-            <path d="m9 18 6-6-6-6"></path>
-          </svg>
         </button>
         <button class="btn-remove-song" type="button" data-id="${escapeHtml(String(song.id))}"
           aria-label="Remove ${escapeHtml(song.title)} from setlist" title="Remove from setlist">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-            <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"></path>
-            <path d="M10 11v5M14 11v5"></path>
+            <circle cx="12" cy="12" r="8"></circle>
+            <path d="M8 12h8"></path>
           </svg>
         </button>
       </li>

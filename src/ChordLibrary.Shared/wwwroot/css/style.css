@@ -1134,6 +1134,8 @@ body:has(.sidebar.open) .fab {
 /* Drag and Drop for Setlist Songs */
 .drag-handle {
   display: inline-flex;
+  flex-direction: column;
+  gap: 1px;
   align-items: center;
   justify-content: center;
   width: 44px;
@@ -1141,8 +1143,8 @@ body:has(.sidebar.open) .fab {
   padding: 0;
   border: 0;
   border-radius: 9px;
-  background: transparent;
-  color: var(--text-muted);
+  background: var(--accent-dim);
+  color: var(--accent);
   cursor: grab;
   user-select: none;
   touch-action: pan-y;
@@ -1150,16 +1152,29 @@ body:has(.sidebar.open) .fab {
 }
 
 .drag-handle svg {
-  width: 19px;
-  height: 19px;
-  fill: currentColor;
+  width: 16px;
+  height: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  opacity: 0.65;
 }
 
 .drag-handle:hover,
 .drag-handle:focus-visible {
-  background: var(--accent-dim);
+  background: color-mix(in srgb, var(--accent) 22%, var(--bg-card));
   color: var(--accent);
 }
+
+.drag-handle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.drag-handle:hover svg,
+.drag-handle:focus-visible svg,
+.drag-handle[aria-pressed="true"] svg { opacity: 1; }
 
 .drag-handle:active {
   cursor: grabbing;
@@ -1199,7 +1214,7 @@ body:has(.sidebar.open) .fab {
 }
 
 .setlist-drag-ghost .drag-handle { color: var(--accent); }
-.setlist-drag-ghost .btn-remove-song, .setlist-drag-ghost .setlist-song-chevron { visibility: hidden; }
+.setlist-drag-ghost .btn-remove-song { visibility: hidden; }
 .setlist-sort-caption {
   position: absolute;
   right: 8px;
@@ -2319,7 +2334,7 @@ body:has(.sidebar.open) .fab {
 
 .setlist-song-open {
   display: grid;
-  grid-template-columns: 30px minmax(0, 1fr) 16px;
+  grid-template-columns: minmax(0, 1fr);
   align-items: center;
   gap: var(--spacing-sm);
   width: 100%;
@@ -2344,11 +2359,9 @@ body:has(.sidebar.open) .fab {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 9px;
-  background: var(--accent-dim);
-  color: var(--accent);
+  min-width: 24px;
+  height: 18px;
+  color: currentColor;
   font-size: var(--font-size-xs);
   font-weight: 800;
 }
@@ -2373,23 +2386,6 @@ body:has(.sidebar.open) .fab {
   font-size: var(--font-size-xs);
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.setlist-song-chevron {
-  width: 16px;
-  height: 16px;
-  fill: none;
-  stroke: var(--text-muted);
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  transition: var(--transition-fast);
-}
-
-.setlist-song-open:hover .setlist-song-chevron,
-.setlist-song-open:focus-visible .setlist-song-chevron {
-  stroke: var(--accent);
-  transform: translateX(2px);
 }
 
 .btn-remove-song {
