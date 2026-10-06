@@ -3355,6 +3355,77 @@ body:has(.sidebar.open) .fab {
   color: var(--text-muted);
 }
 
+/* Floating chord palette: the editor and its highlight reserve the same gutter. */
+.chord-palette {
+  position: absolute;
+  z-index: 4;
+  top: 8px;
+  right: 8px;
+  width: 112px;
+  max-height: calc(100% - 16px);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: var(--bg-card);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, .16);
+}
+.chord-palette-form {
+  width: 100%;
+  min-height: 38px;
+  flex-shrink: 0;
+  padding: 4px;
+  border: 1px solid var(--border-color);
+  border-radius: 7px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 12px;
+}
+.chord-palette-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--text-muted) transparent;
+}
+.chord-palette-grid::-webkit-scrollbar { width: 6px; }
+.chord-palette-grid::-webkit-scrollbar-track { background: transparent; }
+.chord-palette-grid::-webkit-scrollbar-thumb { background: var(--text-muted); border-radius: 6px; }
+.chord-palette-key {
+  min-width: 0;
+  min-height: 44px;
+  padding: 2px;
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, var(--border-color));
+  border-radius: 7px;
+  background: var(--accent-dim);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background .15s, border-color .15s, transform .15s;
+}
+.chord-palette-key small { font-size: 10px; letter-spacing: -.2px; }
+.chord-palette-key:hover { border-color: var(--accent); }
+.chord-palette-key:active { transform: scale(.94); background: color-mix(in srgb, var(--accent) 25%, var(--bg-card)); }
+.chord-palette-key:focus-visible,
+.chord-palette-form:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.chord-palette-hint { flex-shrink: 0; color: var(--text-secondary); font-size: 10px; text-align: center; }
+#inline-chord-palette { top: 56px; max-height: calc(100% - 64px); }
+.song-content-section.is-content-editing .song-content,
+.song-content-section.is-content-editing .contenteditable-highlight,
+.inline-song-edit-surface .inline-song-content,
+.inline-song-edit-surface .inline-song-highlight { padding-right: 136px; }
+.song-compose-surface { position: relative; flex: 1; display: flex; min-height: 200px; }
+.modal-song .song-compose-surface textarea { width: 100%; padding-right: 136px; }
+@media (prefers-reduced-motion: reduce) { .chord-palette-key { transition: none; } }
+
 /* Song Selector */
 .modal-content.song-picker { height: min(680px, 90vh); height: min(680px, 90dvh); }
 .song-picker .modal-panel-header { grid-template-columns: minmax(0, 1fr) 44px; }

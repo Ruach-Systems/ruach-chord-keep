@@ -1,0 +1,8 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Chord palette checks</title>
+<style>body{font-family:system-ui;margin:16px;background:#f6f7fa}button{padding:10px;margin-right:8px}iframe{display:block;border:1px solid #888;margin-top:12px;height:740px}pre{white-space:pre-wrap}</style></head><body>
+<h1>Chord palette checks</h1><p>Disposable offline data. Browser checks do not replace physical Android keyboard testing.</p>
+<button onclick="run(1280)">Desktop checks</button><button onclick="run(414)">Phone checks</button><button onclick="run(320)">Narrow phone checks</button>
+<button onclick="run(414,360)">Compact phone checks</button>
+<pre id="results">Ready</pre><iframe id="preview" title="Chord palette fixture"></iframe>
+<script>function run(width,height=740){const frame=document.getElementById('preview');frame.style.width=width+'px';frame.style.height=height+'px';frame.src='ui-chords-frame.html?run='+Date.now();document.getElementById('results').textContent='Running…';}
+addEventListener('message',event=>{if(event.source===document.getElementById('preview').contentWindow&&event.origin===location.origin)document.getElementById('results').textContent=event.data;});</script></body></html>

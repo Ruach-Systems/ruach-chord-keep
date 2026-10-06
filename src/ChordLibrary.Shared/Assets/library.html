@@ -440,6 +440,7 @@
             </div>
             <pre class="contenteditable-highlight hidden" id="contenteditable-highlight" aria-hidden="true"></pre>
             <pre class="song-content" id="song-content"></pre>
+            <aside class="chord-palette hidden" id="inline-chord-palette" aria-label="Quick chords"></aside>
             <div class="inline-song-editor hidden" id="inline-song-editor">
               <div class="inline-editor-header">
                 <div>
@@ -464,6 +465,7 @@
                 <pre class="inline-song-highlight" id="inline-song-highlight" aria-hidden="true"></pre>
                 <textarea class="inline-song-content" id="inline-song-content" aria-label="Lyrics and chords"
                   spellcheck="false"></textarea>
+                <aside class="chord-palette" id="legacy-chord-palette" aria-label="Quick chords"></aside>
               </div>
               <div class="inline-editor-actions">
                 <button class="btn btn-secondary inline-editor-action" id="btn-cancel-inline-edit" type="button">
@@ -633,8 +635,11 @@
                 aria-label="Insert parentheses and place caret inside" title="Insert ()">()</button>
             </div>
           </div>
-          <textarea id="song-content-input" rows="16" required
-            placeholder="[INTRO]&#10;Em-Bm-C-G-&#10;Em-Bm-C|(Am-Bm-C)-(Bm-C-D)&#10;&#10;VERSE&#10;..."></textarea>
+          <div class="song-compose-surface">
+            <textarea id="song-content-input" rows="16" required
+              placeholder="[INTRO]&#10;Em-Bm-C-G-&#10;Em-Bm-C|(Am-Bm-C)-(Bm-C-D)&#10;&#10;VERSE&#10;..."></textarea>
+            <aside class="chord-palette" id="song-chord-palette" aria-label="Quick chords"></aside>
+          </div>
         </div>
 
         <div class="edit-song-info-note hidden" id="edit-song-info-note">

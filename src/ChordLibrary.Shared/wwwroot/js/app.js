@@ -856,6 +856,7 @@
     dom.contentEditableActions.classList.toggle('hidden', !isContentEditableEditing);
     dom.contentEditableCharButtons.classList.toggle('hidden', !isContentEditableEditing);
     dom.contentEditableHighlight.classList.toggle('hidden', !isContentEditableEditing);
+    $('inline-chord-palette').classList.toggle('hidden', !isContentEditableEditing);
     dom.inlineEditButton.classList.toggle('hidden', isInlineEditing);
     dom.inlineEditorNote.classList.toggle('hidden', !isLegacyInlineEditing || transposeSteps === 0);
 
@@ -2717,7 +2718,67 @@
   // Event Listeners
   // ================================================
 
+  function initChordPalette(host, editor, insert) {
+    const forms = [['Major', ''], ['Minor', 'm'], ['Major 7', 'maj7'], ['Minor 7', 'm7'],
+      ['Dominant 7', '7'], ['Diminished', 'dim'], ['Augmented', 'aug'], ['Sus 2', 'sus2'],
+      ['Sus 4', 'sus4'], ['Major 6', '6'], ['Minor 6', 'm6'], ['Add 9', 'add9'],
+      ['Diminished 7', 'dim7'], ['Half-dim 7', 'm7b5']];
+    const roots = ['A', 'A#', 'B', 'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#'];
+    host.innerHTML = `<label class="sr-only" for="${host.id}-form">Chord form</label>
+      <select class="chord-palette-form" id="${host.id}-form">${forms.map(([name, suffix]) => `<option value="${suffix}">${name}</option>`).join('')}</select>
+      <div class="chord-palette-grid" role="group" aria-label="Insert chord">${roots.map(root => `<button class="chord-palette-key" type="button" data-root="${root}"><span>${root}</span><small></small></button>`).join('')}</div>
+      <span class="chord-palette-hint" aria-hidden="true">Adds | · 4 counts</span>`;
+    const selector = host.querySelector('select');
+    const buttons = [...host.querySelectorAll('button')];
+    const updateLabels = () => buttons.forEach(button => {
+      const chord = button.dataset.root + selector.value;
+      button.querySelector('small').textContent = selector.value;
+      button.setAttribute('aria-label', `Insert ${chord} followed by a bar (4 counts)`);
+      button.title = chord + '|';
+    });
+    selector.addEventListener('change', updateLabels);
+    selector.closest('form')?.addEventListener('reset', () => queueMicrotask(updateLabels));
+    updateLabels();
+
+    // Keep the contenteditable caret while the native form selector owns focus.
+    // Textareas retain their selectionStart/End when controls take focus.
+    let savedRange = null;
+    const captureRange = () => {
+      if (!editor.isContentEditable) return;
+      const selection = window.getSelection();
+      if (selection?.rangeCount && editor.contains(selection.getRangeAt(0).commonAncestorContainer))
+        savedRange = selection.getRangeAt(0).cloneRange();
+    };
+    document.addEventListener('selectionchange', captureRange);
+    editor.addEventListener('input', captureRange);
+    host.addEventListener('pointerdown', event => {
+      captureRange();
+      if (event.target.closest('button') && event.isPrimary && document.activeElement === editor)
+        event.preventDefault(); // Keep the mobile keyboard, selection and Caps Lock state.
+    });
+    host.addEventListener('click', event => {
+      const button = event.target.closest('button[data-root]');
+      if (!button) return;
+      if (editor.isContentEditable) {
+        editor.focus({ preventScroll: true });
+        const selection = window.getSelection();
+        const range = savedRange && editor.contains(savedRange.commonAncestorContainer) ? savedRange.cloneRange() : document.createRange();
+        if (!savedRange || !editor.contains(savedRange.commonAncestorContainer)) {
+          range.selectNodeContents(editor);
+          range.collapse(false);
+        }
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
+      insert(button.dataset.root + selector.value + '|');
+      captureRange();
+    });
+  }
+
   function initEventListeners() {
+    initChordPalette($('inline-chord-palette'), dom.songContent, insertPlainTextIntoContentEditable);
+    initChordPalette($('legacy-chord-palette'), dom.inlineSongContent, text => insertCharAtCursor(dom.inlineSongContent, text));
+    initChordPalette($('song-chord-palette'), dom.songContentInput, text => insertCharAtCursor(dom.songContentInput, text));
     // Home FAB button
     $('btn-home').addEventListener('click', goHome);
     dom.songContentSection.addEventListener('scroll', updateSheetScrollTopButton, { passive: true });
