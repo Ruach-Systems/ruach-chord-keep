@@ -924,8 +924,8 @@
         <button class="drag-handle" type="button" aria-label="Move ${escapeHtml(song.title)}" aria-pressed="false"
           aria-describedby="setlist-sort-instructions" title="Drag, or press Space to reorder">
           <span class="setlist-song-number" aria-hidden="true">${index + 1}</span>
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-            <path d="M6 9h12M6 15h12"></path>
+          <svg viewBox="0 0 24 16" aria-hidden="true" focusable="false">
+            <path d="M5 5h14M5 11h14"></path>
           </svg>
         </button>
         <button class="setlist-song-open" type="button" aria-label="Open ${escapeHtml(song.title)}">
@@ -1449,63 +1449,93 @@
 
   function openAddSongsModal() {
     if (!selectedSetlistId) return;
+    $('song-selector-search').value = '';
+    $('add-songs-status').textContent = '';
+    renderAddSongsList();
+    openModalWithFocusTrap(dom.addSongsModal);
+  }
 
+  function renderAddSongsList() {
     const setlist = setlists.find(p => p.id === selectedSetlistId);
     if (!setlist) return;
-
-    const sortedSongs = [...songs].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-    dom.songSelector.innerHTML = sortedSongs.map(song => `
-      <label class="song-selector-item">
-        <input type="checkbox" value="${escapeHtml(String(song.id))}" ${setlist.songIds.includes(song.id) ? 'checked' : ''}>
+    const query = $('song-selector-search').value.trim().toLowerCase();
+    const sortedSongs = [...songs].filter(song => !query || song.title.toLowerCase().includes(query) || (song.artist || '').toLowerCase().includes(query))
+      .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    LibraryView.patchList(dom.songSelector, sortedSongs.map(song => {
+      const added = setlist.songIds.includes(song.id);
+      return `
+      <div class="song-selector-item" role="listitem" data-id="${escapeHtml(String(song.id))}">
         <div class="song-selector-info">
           <div class="song-selector-title">${escapeHtml(song.title)}</div>
           ${song.artist ? `<div class="song-selector-artist">${escapeHtml(song.artist)}</div>` : ''}
         </div>
-      </label>
-    `).join('');
-
-    openModalWithFocusTrap(dom.addSongsModal);
+        <button class="song-add-button${added ? ' is-added' : ''}" type="button" data-id="${escapeHtml(String(song.id))}"
+          aria-label="${escapeHtml(added ? song.title + ' is already in this setlist' : 'Add ' + song.title + ' to setlist')}" ${added ? 'disabled' : ''}>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="${added ? 'm5 12 4 4L19 6' : 'M12 5v14M5 12h14'}"></path></svg>
+          ${added ? '<span>Added</span>' : ''}
+        </button>
+      </div>`;
+    }).join('') || `<div class="song-selector-empty" role="status">${query ? 'No songs match your search.' : 'Your library is empty. Create or import a song first.'}</div>`);
   }
 
   function closeAddSongsModal() {
     closeModalWithFocusTrap(dom.addSongsModal);
   }
 
-  function confirmAddSongs() {
-    if (!selectedSetlistId) return;
-
+  function addSongToSetlist(songId) {
+    if (!selectedSetlistId || dom.addSongsModal.classList.contains('hidden')) return;
     const setlist = setlists.find(p => p.id === selectedSetlistId);
-    if (!setlist) return;
-
-    const checkboxes = dom.songSelector.querySelectorAll('input[type="checkbox"]');
-    const selectedIds = Array.from(checkboxes)
-      .filter(cb => cb.checked)
-      .map(cb => cb.value);
-
-    // Preserve existing order (oldest first), append newly added at the end
-    const existing = setlist.songIds.filter(id => selectedIds.includes(id));
-    const added = selectedIds.filter(id => !setlist.songIds.includes(id));
-    setlist.songIds = [...existing, ...added];
+    const song = songs.find(item => item.id === songId);
+    if (!setlist || !song) return;
+    if (setlist.songIds.includes(songId)) { renderAddSongsList(); return; }
+    const focused = document.activeElement;
+    const moveFocus = dom.songSelector.contains(focused) && focused.dataset.id === songId;
+    // Each plus appends exactly once; option sorting never determines set order.
+    setlist.songIds.push(songId);
     setlist.updatedAt = Date.now();
-
     saveSetlists();
-    closeAddSongsModal();
     renderSetlistDetail();
     renderSetlistList();
+    renderAddSongsList();
+    $('add-songs-status').textContent = `"${song.title}" added to the end of "${setlist.name}".`;
+    if (moveFocus) {
+      const buttons = Array.from(dom.songSelector.querySelectorAll('.song-add-button'));
+      const index = buttons.findIndex(button => button.dataset.id === songId);
+      const next = buttons.slice(index + 1).find(button => !button.disabled) || buttons.find(button => !button.disabled) || $('btn-cancel-add-songs');
+      next.focus({ preventScroll: true });
+    }
   }
 
-  function removeSongFromSetlist(songId) {
+  function removeSongFromSetlist(songId, visibleIndex) {
     if (!selectedSetlistId) return;
 
     const setlist = setlists.find(p => p.id === selectedSetlistId);
     if (!setlist) return;
-
-    setlist.songIds = setlist.songIds.filter(id => id !== songId);
-    setlist.updatedAt = Date.now();
-
-    saveSetlists();
-    renderSetlistDetail();
-    renderSetlistList();
+    const visibleIndices = setlist.songIds.map((id, index) => songs.some(song => song.id === id) ? index : -1).filter(index => index >= 0);
+    const memberIndex = visibleIndices[visibleIndex];
+    if (!Number.isInteger(visibleIndex) || memberIndex === undefined || setlist.songIds[memberIndex] !== songId) return;
+    const song = songs.find(item => item.id === songId);
+    openConfirmModal(
+      `Remove "${song.title}" from "${setlist.name}"? The song will remain in your song library.`,
+      () => {
+        // Capture this membership, not every occurrence of the same song.
+        // A forced account change closes the dialog and clears the callback.
+        const current = setlists.find(item => item.id === setlist.id);
+        if (selectedSetlistId !== setlist.id || current?.songIds[memberIndex] !== songId) return;
+        current.songIds.splice(memberIndex, 1);
+        current.updatedAt = Date.now();
+        saveSetlists();
+        renderSetlistDetail();
+        renderSetlistList();
+        queueMicrotask(() => {
+          if (selectedSetlistId !== setlist.id) return;
+          const items = dom.setlistSongs.querySelectorAll('.setlist-song-item');
+          const next = items[Math.min(visibleIndex, items.length - 1)];
+          (next?.querySelector('.setlist-song-open') || $('btn-add-songs-to-setlist')).focus({ preventScroll: true });
+        });
+      },
+      { title: 'Remove song from setlist?', action: 'Remove' }
+    );
   }
 
   // ================================================
@@ -1646,7 +1676,9 @@
   // Confirm Modal
   // ================================================
 
-  function openConfirmModal(message, callback) {
+  function openConfirmModal(message, callback, { title = 'Confirm Delete', action = 'Delete' } = {}) {
+    $('confirm-title').textContent = title;
+    $('btn-confirm-delete').textContent = action;
     dom.confirmMessage.textContent = message;
     confirmCallback = callback;
     openModalWithFocusTrap(dom.confirmModal);
@@ -2255,7 +2287,7 @@
     }
 
     modalEl.addEventListener('keydown', handler);
-    first.focus();
+    if (!modalEl.contains(document.activeElement)) first.focus();
     return handler; // return so we can remove it later
   }
 
@@ -2269,6 +2301,7 @@
     modalEl.classList.remove('hidden');
     // Small delay to allow DOM to render
     setTimeout(() => {
+      if (modalEl.classList.contains('hidden') || modalLayers[modalLayers.length - 1] !== modalEl) return;
       activeFocusTrapHandler = trapFocus(modalEl.querySelector('.modal-content'));
     }, 50);
   }
@@ -2771,7 +2804,7 @@
       const removeBtn = e.target.closest('.btn-remove-song');
       if (removeBtn) {
         e.stopPropagation();
-        removeSongFromSetlist(removeBtn.dataset.id);
+        removeSongFromSetlist(removeBtn.dataset.id, Number(removeBtn.closest('.setlist-song-item').dataset.index));
         return;
       }
 
@@ -3095,7 +3128,12 @@
     // Add songs to setlist
     $('btn-add-songs-to-setlist').addEventListener('click', openAddSongsModal);
     $('btn-cancel-add-songs').addEventListener('click', closeAddSongsModal);
-    $('btn-confirm-add-songs').addEventListener('click', confirmAddSongs);
+    $('btn-close-add-songs').addEventListener('click', closeAddSongsModal);
+    $('song-selector-search').addEventListener('input', renderAddSongsList);
+    dom.songSelector.addEventListener('click', event => {
+      const button = event.target.closest('.song-add-button');
+      if (button) addSongToSetlist(button.dataset.id);
+    });
     dom.addSongsModal.querySelector('.modal-backdrop').addEventListener('click', closeAddSongsModal);
 
     // Confirm modal

@@ -140,13 +140,89 @@
       await reset(['song-0']); key(rows()[0].querySelector('.drag-handle'), ' '); await hold(rows()[0]);
       assert(clean(), 'Single-row sort activated');
     });
+    await check('removal requires confirmation and Cancel or native Back leaves data unchanged', async () => {
+      const original = stored(); rows()[0].querySelector('.btn-remove-song').click(); await wait(60);
+      assert(!$('confirm-modal').classList.contains('hidden') && $('btn-confirm-delete').textContent === 'Remove', 'Removal confirmation missing');
+      assert($('confirm-message').textContent.includes('Song 0') && $('confirm-message').textContent.includes('remain in your song library'), 'Unclear removal message');
+      assert(equal(stored(), original) && saves.length === 0 && !NativeBridge.canRefresh(), 'Removal saved early or cloud allowed behind dialog');
+      $('btn-cancel-confirm').click(); assert(equal(stored(), original), 'Cancel removed song');
+      const remove = rows()[0].querySelector('.btn-remove-song'); remove.focus(); remove.click(); NativeBridge.handleBack(); await wait(70);
+      assert($('confirm-modal').classList.contains('hidden') && equal(stored(), original) && saves.length === 0, 'Back removed song or failed to dismiss');
+      assert(document.activeElement === remove, 'A dismissed confirmation stole focus');
+    });
+    await check('confirmed removal affects only the clicked occurrence and retains library songs', async () => {
+      await reset(['missing-before', 'song-0', 'song-1', 'song-0', 'missing-after']);
+      rows()[2].querySelector('.btn-remove-song').click(); await wait(60); $('btn-confirm-delete').click();
+      await NativeBridge.flush(); await settled();
+      assert(equal(stored(), ['missing-before', 'song-0', 'song-1', 'missing-after']), 'Other duplicate or unresolved reference removed');
+      assert(JSON.parse(LibraryStorage.getItem('chord-library-songs')).some(song => song.id === 'song-0'), 'Song deleted from library');
+      assert(saves.length === 1 && $('undo-toast').classList.contains('hidden'), 'Removal saved repeatedly or used undo toast');
+      assert(document.activeElement === rows()[1].querySelector('.setlist-song-open'), 'Focus not restored to a remaining song');
+    });
+    await check('plus adds immediately in click order and prevents duplicate additions', async () => {
+      const original = ['missing-before', 'song-0', 'song-1', 'song-0', 'missing-after']; await reset(original);
+      $('btn-add-songs-to-setlist').click();
+      const add = id => $('song-selector').querySelector('.song-add-button[data-id="' + id + '"]');
+      assert(!$('song-selector').querySelector('input[type="checkbox"]') && !$('btn-confirm-add-songs'), 'Checkbox/bulk selection remains');
+      assert(add('song-0').disabled && add('song-0').textContent.includes('Added'), 'Existing song not marked Added');
+      const unchanged = add('song-3').closest('.song-selector-item'), first = add('song-8');
+      first.click(); assert(equal(stored(), [...original, 'song-8']), 'First plus did not save immediately');
+      add('song-2').click(); await NativeBridge.flush();
+      assert(equal(stored(), [...original, 'song-8', 'song-2']), 'Option order replaced click order');
+      assert(!$('add-songs-modal').classList.contains('hidden') && add('song-3').closest('.song-selector-item') === unchanged, 'Picker closed or neighboring row replaced');
+      assert(first === add('song-8') && first.disabled && first.textContent.includes('Added'), 'Added button state/identity stale');
+      const writes = saves.length; first.click(); first.dispatchEvent(new MouseEvent('click', { bubbles: true })); await NativeBridge.flush();
+      assert(equal(stored(), [...original, 'song-8', 'song-2']) && saves.length === writes, 'Repeated add created duplicate or extra write');
+    });
+    await check('picker search matches title/artist, keeps its focus and can show an empty result', async () => {
+      $('btn-add-songs-to-setlist').click(); const input = $('song-selector-search'); input.focus();
+      for (const [query, count] of [['  Artist 8  ', 1], ['song 12', 1], ['Test lyrics', 0], ['', 35]]) {
+        input.value = query; input.dispatchEvent(new Event('input')); await settled();
+        assert($('song-selector').querySelectorAll('.song-selector-item').length === count, 'Incorrect picker matches for ' + query);
+        assert(document.activeElement === input, 'Search lost focus');
+      }
+      assert(saves.length === 0, 'Searching wrote setlist data');
+    });
+    await check('Done and native Back retain immediate additions; reopen shows them as Added', async () => {
+      const original = stored(); $('btn-add-songs-to-setlist').click();
+      $('song-selector').querySelector('.song-add-button[data-id="song-8"]').click(); $('btn-cancel-add-songs').click();
+      assert(equal(stored(), [...original, 'song-8']), 'Done discarded addition');
+      $('btn-add-songs-to-setlist').click();
+      assert($('song-selector').querySelector('.song-add-button[data-id="song-8"]').disabled, 'Reopened picker allows duplicate');
+      $('song-selector').querySelector('.song-add-button[data-id="song-9"]').click(); NativeBridge.handleBack();
+      assert($('add-songs-modal').classList.contains('hidden') && equal(stored(), [...original, 'song-8', 'song-9']), 'Back discarded additions or failed to dismiss');
+      await NativeBridge.flush();
+    });
+    await check('keyboard additions retain list scroll and move focus to another available song', async () => {
+      $('btn-add-songs-to-setlist').click(); await wait(70);
+      const picker = $('song-selector'), button = picker.querySelector('.song-add-button[data-id="song-8"]');
+      picker.scrollTop = 180; const scroll = picker.scrollTop; button.focus({ preventScroll: true }); button.click(); await settled();
+      assert(document.activeElement === picker.querySelector('.song-add-button[data-id="song-9"]'), 'Focus stranded on a disabled button');
+      assert(picker.scrollTop === scroll, 'Picker scrolled unexpectedly');
+      assert($('add-songs-status').textContent.includes('Song 8') && $('add-songs-status').textContent.includes('end'), 'Addition not announced');
+      await reset(Array.from({ length: 34 }, (_, i) => 'song-' + i)); $('btn-add-songs-to-setlist').click(); await wait(70);
+      const last = $('song-selector').querySelector('.song-add-button[data-id="song-34"]'); last.focus({ preventScroll: true }); last.click(); await settled();
+      assert(document.activeElement === $('btn-cancel-add-songs'), 'No available songs left, but focus did not move to Done');
+      key($('btn-cancel-add-songs'), 'Tab');
+      assert(document.activeElement === $('btn-close-add-songs'), 'Picker focus escaped after the last addition');
+    });
     await reset(Array.from({ length: 35 }, (_, i) => 'song-' + i));
     addEventListener('message', async event => {
-      if (event.source !== parent || event.origin !== location.origin || event.data !== 'preview-reorder') return;
+      if (event.source !== parent || event.origin !== location.origin) return;
+      if (event.data === 'preview-layout') {
+        await reset();
+        const songs = JSON.parse(LibraryStorage.getItem('chord-library-songs'));
+        const samples = [['Morning Light', 'Studio Collective'], ['A Longer Song Title That Fits Cleanly', 'An artist with a longer name'],
+          ['Instrumental Interlude', ''], ['Evening Sky', 'Northside Ensemble'], ['Finale', 'Studio Collective']];
+        samples.forEach(([title, artist], i) => Object.assign(songs[i], { title, artist }));
+        NativeBridge.replaceSnapshot({ 'chord-library-songs': JSON.stringify(songs), 'chord-library-setlists': LibraryStorage.getItem('chord-library-setlists') });
+        return;
+      }
+      if (event.data !== 'preview-reorder') return;
       await reset(); const row = rows()[0], p = await hold(row);
       touch('touchmove', window, { x: p.x, y: point(rows()[3]).y + 8 });
     });
-    results.push(results.every(line => line.startsWith('PASS')) ? 'ALL 11 CHECKS PASSED; interactive preview ready.' : 'CHECKS FAILED');
+    results.push(results.every(line => line.startsWith('PASS')) ? `ALL ${results.length} CHECKS PASSED; interactive preview ready.` : 'CHECKS FAILED');
   } catch (error) { results.push('FATAL ' + error.stack); }
   parent.postMessage(results.join('\n'), location.origin);
 })();

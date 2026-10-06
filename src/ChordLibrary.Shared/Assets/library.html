@@ -711,27 +711,36 @@
   </div>
 
   <!-- Add Songs to Setlist Modal -->
-  <div class="modal hidden" id="add-songs-modal" role="dialog" aria-modal="true" aria-label="Add Songs to Setlist">
+  <div class="modal hidden" id="add-songs-modal" role="dialog" aria-modal="true" aria-labelledby="add-songs-title" aria-describedby="add-songs-help">
     <div class="modal-backdrop"></div>
-    <div class="modal-content">
-      <h3 class="modal-title">Add Songs to Setlist</h3>
-      <div class="song-selector" id="song-selector"></div>
-      <div class="modal-actions">
-        <button type="button" class="btn btn-secondary" id="btn-cancel-add-songs">
-          Cancel
+    <div class="modal-content modal-panel song-picker">
+      <div class="modal-panel-header">
+        <div class="modal-panel-heading">
+          <h3 class="modal-title" id="add-songs-title">Add songs</h3>
+          <p class="modal-panel-subtitle" id="add-songs-help">Tap + to add immediately, in the order you choose.</p>
+        </div>
+        <button class="modal-panel-close" id="btn-close-add-songs" type="button" aria-label="Close song picker">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"></path></svg>
         </button>
-        <button type="button" class="btn btn-primary" id="btn-confirm-add-songs">
-          Add Selected
-        </button>
+      </div>
+      <div class="song-picker-search">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="m16 16 4 4"></path></svg>
+        <label class="sr-only" for="song-selector-search">Search songs by title or artist</label>
+        <input type="search" id="song-selector-search" placeholder="Search title or artist…" autocapitalize="none" spellcheck="false" />
+      </div>
+      <div class="song-selector" id="song-selector" role="list" aria-label="Songs to add"></div>
+      <p class="sr-only" id="add-songs-status" role="status" aria-live="polite" aria-atomic="true"></p>
+      <div class="modal-actions modal-panel-actions">
+        <button type="button" class="btn btn-primary" id="btn-cancel-add-songs">Done</button>
       </div>
     </div>
   </div>
 
   <!-- Confirm Delete Modal -->
-  <div class="modal hidden" id="confirm-modal" role="alertdialog" aria-modal="true" aria-labelledby="confirm-message">
+  <div class="modal hidden" id="confirm-modal" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-message">
     <div class="modal-backdrop"></div>
     <div class="modal-content modal-confirm">
-      <h3 class="modal-title">Confirm Delete</h3>
+      <h3 class="modal-title" id="confirm-title">Confirm Delete</h3>
       <p id="confirm-message">Are you sure you want to delete this item?</p>
       <div class="modal-actions">
         <button type="button" class="btn btn-secondary" id="btn-cancel-confirm">
