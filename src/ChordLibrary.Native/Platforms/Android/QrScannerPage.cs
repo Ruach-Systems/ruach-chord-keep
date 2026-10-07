@@ -10,7 +10,7 @@ public sealed class QrScannerPage : ContentPage
     private readonly Func<Task<string?>> pickImage;
     private readonly Grid preview = new() { BackgroundColor = Colors.Black, MinimumHeightRequest = 120 };
     private readonly Label status = new() { TextColor = Colors.White, Text = "Starting camera…" };
-    private readonly Button imageButton = new() { Text = "Choose QR image", BackgroundColor = Color.FromArgb("#42A5F5"), TextColor = Colors.Black };
+    private readonly Button imageButton = new() { Text = "Choose QR image", BackgroundColor = Color.FromArgb("#EF5967"), TextColor = Colors.Black };
     private CameraBarcodeReaderView? camera;
     private Window? ownerWindow;
     private bool visible, suspended, picking, starting, finished;
@@ -23,8 +23,8 @@ public sealed class QrScannerPage : ContentPage
         this.pickImage = pickImage;
         Title = "Scan song QR";
         SafeAreaEdges = new SafeAreaEdges(SafeAreaRegions.Container);
-        BackgroundColor = Color.FromArgb("#18223D");
-        var close = new Button { Text = "Cancel", TextColor = Colors.White, BackgroundColor = Color.FromArgb("#272C49") };
+        BackgroundColor = Color.FromArgb("#141821");
+        var close = new Button { Text = "Cancel", TextColor = Colors.White, BackgroundColor = Color.FromArgb("#292530") };
         close.Clicked += (_, _) => _ = FinishAsync(null);
         imageButton.Clicked += (_, _) => _ = ChooseImageAsync();
         var layout = new Grid

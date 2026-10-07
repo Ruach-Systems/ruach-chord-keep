@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Chord Library
+Comment=Songs, chords and setlists
+Exec=/path/to/chord-library
+Icon=chord-library
+Terminal=false
+Categories=AudioVideo;Music;

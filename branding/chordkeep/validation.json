@@ -1,0 +1,1953 @@
+{
+  "kit": "ChordKeep — Royal Folio",
+  "version": "1.2",
+  "passed": true,
+  "checksPassed": 369,
+  "pngCount": 267,
+  "svgCount": 35,
+  "checks": [
+    {
+      "check": "Approved crown and musical folio geometry",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "Separate crown and two musical pages",
+      "passed": true,
+      "details": {
+        "components": 3
+      }
+    },
+    {
+      "check": "Small symbol 16px retains margins",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "Small symbol 24px retains margins",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "Small symbol 32px retains margins",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "Small symbol 48px retains margins",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "Small symbol 64px retains margins",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "Flat crimson fill",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "Flat obsidian fill",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "Flat aubergine fill",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "Flat ivory fill",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "Flat white fill",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "Flat black fill",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/symbol-crimson-256.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/symbol-crimson-512.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/symbol-crimson-1024.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/symbol-crimson-2048.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/symbol-obsidian-256.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/symbol-obsidian-512.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/symbol-obsidian-1024.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/symbol-obsidian-2048.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/symbol-aubergine-256.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/symbol-aubergine-512.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/symbol-aubergine-1024.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/symbol-aubergine-2048.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/symbol-ivory-256.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/symbol-ivory-512.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/symbol-ivory-1024.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/symbol-ivory-2048.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/symbol-white-256.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/symbol-white-512.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/symbol-white-1024.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/symbol-white-2048.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/symbol-black-256.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/symbol-black-512.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/symbol-black-1024.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/symbol-black-2048.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/app-crimson-16.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/app-crimson-20.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/app-crimson-24.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/app-crimson-32.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/app-crimson-40.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/app-crimson-48.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/app-crimson-64.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/app-crimson-96.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/app-crimson-128.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/app-crimson-192.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/app-crimson-256.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/app-crimson-512.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/app-crimson-1024.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/app-crimson-2048.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG previews/app-crimson-rounded-512.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/app-obsidian-16.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/app-obsidian-20.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/app-obsidian-24.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/app-obsidian-32.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/app-obsidian-40.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/app-obsidian-48.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/app-obsidian-64.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/app-obsidian-96.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/app-obsidian-128.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/app-obsidian-192.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/app-obsidian-256.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/app-obsidian-512.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/app-obsidian-1024.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/app-obsidian-2048.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG previews/app-obsidian-rounded-512.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/app-ivory-16.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/app-ivory-20.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/app-ivory-24.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/app-ivory-32.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/app-ivory-40.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/app-ivory-48.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/app-ivory-64.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/app-ivory-96.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/app-ivory-128.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/app-ivory-192.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/app-ivory-256.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/app-ivory-512.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/app-ivory-1024.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/app-ivory-2048.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG previews/app-ivory-rounded-512.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/app-aubergine-16.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/app-aubergine-20.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/app-aubergine-24.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/app-aubergine-32.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/app-aubergine-40.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/app-aubergine-48.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/app-aubergine-64.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/app-aubergine-96.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/app-aubergine-128.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/app-aubergine-192.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/app-aubergine-256.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/app-aubergine-512.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/app-aubergine-1024.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/app-aubergine-2048.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG previews/app-aubergine-rounded-512.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/horizontal-primary-512.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/horizontal-primary-1024.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/horizontal-primary-2048.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/stacked-primary-512.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/stacked-primary-1024.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/stacked-primary-2048.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/horizontal-white-512.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/horizontal-white-1024.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/horizontal-white-2048.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/stacked-white-512.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/stacked-white-1024.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/stacked-white-2048.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/horizontal-obsidian-512.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/horizontal-obsidian-1024.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/horizontal-obsidian-2048.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/stacked-obsidian-512.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/stacked-obsidian-1024.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/stacked-obsidian-2048.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/horizontal-crimson-512.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/horizontal-crimson-1024.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/horizontal-crimson-2048.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/stacked-crimson-512.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/stacked-crimson-1024.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG assets/stacked-crimson-2048.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/web/favicon-16.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/web/favicon-32.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/web/favicon-48.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/web/favicon-64.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/web/icon-192.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/web/icon-maskable-192.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/web/icon-512.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/web/icon-maskable-512.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/web/icon-1024.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/web/icon-maskable-1024.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/web/apple-touch-icon.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/android/res/mipmap-ldpi/ic_launcher.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/android/res/mipmap-ldpi/ic_launcher_round.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/android/res/mipmap-mdpi/ic_launcher.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/android/res/mipmap-mdpi/ic_launcher_round.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/android/res/mipmap-hdpi/ic_launcher.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/android/res/mipmap-hdpi/ic_launcher_round.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/android/res/mipmap-xhdpi/ic_launcher.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/android/res/mipmap-xhdpi/ic_launcher_round.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/android/res/mipmap-xxhdpi/ic_launcher.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/android/res/mipmap-xxhdpi/ic_launcher_round.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/android/res/mipmap-xxxhdpi/ic_launcher.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/android/res/mipmap-xxxhdpi/ic_launcher_round.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/android/layers/mdpi-foreground.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/android/layers/hdpi-foreground.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/android/layers/xhdpi-foreground.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/android/layers/xxhdpi-foreground.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/android/layers/xxxhdpi-foreground.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/android/google-play-icon-512.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square44x44Logo.targetsize-16.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square44x44Logo.targetsize-16_altform-unplated.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square44x44Logo.targetsize-16_altform-lightunplated.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square44x44Logo.targetsize-20.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square44x44Logo.targetsize-20_altform-unplated.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square44x44Logo.targetsize-20_altform-lightunplated.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square44x44Logo.targetsize-24.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square44x44Logo.targetsize-24_altform-unplated.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square44x44Logo.targetsize-24_altform-lightunplated.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square44x44Logo.targetsize-30.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square44x44Logo.targetsize-30_altform-unplated.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square44x44Logo.targetsize-30_altform-lightunplated.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square44x44Logo.targetsize-32.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square44x44Logo.targetsize-32_altform-unplated.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square44x44Logo.targetsize-32_altform-lightunplated.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square44x44Logo.targetsize-36.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square44x44Logo.targetsize-36_altform-unplated.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square44x44Logo.targetsize-36_altform-lightunplated.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square44x44Logo.targetsize-40.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square44x44Logo.targetsize-40_altform-unplated.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square44x44Logo.targetsize-40_altform-lightunplated.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square44x44Logo.targetsize-44.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square44x44Logo.targetsize-44_altform-unplated.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square44x44Logo.targetsize-44_altform-lightunplated.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square44x44Logo.targetsize-48.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square44x44Logo.targetsize-48_altform-unplated.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square44x44Logo.targetsize-48_altform-lightunplated.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square44x44Logo.targetsize-60.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square44x44Logo.targetsize-60_altform-unplated.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square44x44Logo.targetsize-60_altform-lightunplated.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square44x44Logo.targetsize-64.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square44x44Logo.targetsize-64_altform-unplated.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square44x44Logo.targetsize-64_altform-lightunplated.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square44x44Logo.targetsize-72.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square44x44Logo.targetsize-72_altform-unplated.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square44x44Logo.targetsize-72_altform-lightunplated.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square44x44Logo.targetsize-80.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square44x44Logo.targetsize-80_altform-unplated.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square44x44Logo.targetsize-80_altform-lightunplated.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square44x44Logo.targetsize-96.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square44x44Logo.targetsize-96_altform-unplated.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square44x44Logo.targetsize-96_altform-lightunplated.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square44x44Logo.targetsize-128.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square44x44Logo.targetsize-128_altform-unplated.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square44x44Logo.targetsize-128_altform-lightunplated.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square44x44Logo.targetsize-256.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square44x44Logo.targetsize-256_altform-unplated.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square44x44Logo.targetsize-256_altform-lightunplated.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square44x44Logo.scale-100.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square44x44Logo.scale-125.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square44x44Logo.scale-150.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square44x44Logo.scale-200.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square44x44Logo.scale-400.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square71x71Logo.scale-100.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square71x71Logo.scale-125.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square71x71Logo.scale-150.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square71x71Logo.scale-200.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square71x71Logo.scale-400.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square150x150Logo.scale-100.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square150x150Logo.scale-125.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square150x150Logo.scale-150.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square150x150Logo.scale-200.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square150x150Logo.scale-400.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square310x310Logo.scale-100.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square310x310Logo.scale-125.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square310x310Logo.scale-150.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square310x310Logo.scale-200.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Square310x310Logo.scale-400.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/StoreLogo.scale-100.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/StoreLogo.scale-125.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/StoreLogo.scale-150.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/StoreLogo.scale-200.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/StoreLogo.scale-400.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Wide310x150Logo.scale-100.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Wide310x150Logo.scale-125.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Wide310x150Logo.scale-150.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Wide310x150Logo.scale-200.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/Wide310x150Logo.scale-400.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/SplashScreen.scale-100.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/SplashScreen.scale-125.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/SplashScreen.scale-150.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/SplashScreen.scale-200.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/windows/SplashScreen.scale-400.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/apple/AppIcon.appiconset/ChordKeep-Light-1024.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/apple/AppIcon.appiconset/ChordKeep-Dark-1024.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/apple/AppIcon.appiconset/ChordKeep-Tinted-1024.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/apple/legacy/AppIcon.appiconset/icon-40.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/apple/legacy/AppIcon.appiconset/icon-60.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/apple/legacy/AppIcon.appiconset/icon-58.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/apple/legacy/AppIcon.appiconset/icon-87.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/apple/legacy/AppIcon.appiconset/icon-80.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/apple/legacy/AppIcon.appiconset/icon-120.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/apple/legacy/AppIcon.appiconset/icon-180.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/apple/legacy/AppIcon.appiconset/icon-20.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/apple/legacy/AppIcon.appiconset/icon-29.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/apple/legacy/AppIcon.appiconset/icon-76.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/apple/legacy/AppIcon.appiconset/icon-152.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/apple/legacy/AppIcon.appiconset/icon-167.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/apple/legacy/AppIcon.appiconset/icon-1024.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/apple/composer-source/foreground.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/apple/composer-source/background.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/macos/ChordKeep.iconset/icon_16x16.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/macos/AppIcon.appiconset/icon_16x16.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/macos/ChordKeep.iconset/icon_16x16@2x.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/macos/AppIcon.appiconset/icon_16x16@2x.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/macos/ChordKeep.iconset/icon_32x32.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/macos/AppIcon.appiconset/icon_32x32.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/macos/ChordKeep.iconset/icon_32x32@2x.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/macos/AppIcon.appiconset/icon_32x32@2x.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/macos/ChordKeep.iconset/icon_128x128.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/macos/AppIcon.appiconset/icon_128x128.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/macos/ChordKeep.iconset/icon_128x128@2x.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/macos/AppIcon.appiconset/icon_128x128@2x.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/macos/ChordKeep.iconset/icon_256x256.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/macos/AppIcon.appiconset/icon_256x256.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/macos/ChordKeep.iconset/icon_256x256@2x.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/macos/AppIcon.appiconset/icon_256x256@2x.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/macos/ChordKeep.iconset/icon_512x512.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/macos/AppIcon.appiconset/icon_512x512.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/macos/ChordKeep.iconset/icon_512x512@2x.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/macos/AppIcon.appiconset/icon_512x512@2x.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/linux/hicolor/16x16/apps/chordkeep.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/linux/hicolor/24x24/apps/chordkeep.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/linux/hicolor/32x32/apps/chordkeep.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/linux/hicolor/48x48/apps/chordkeep.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/linux/hicolor/64x64/apps/chordkeep.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/linux/hicolor/128x128/apps/chordkeep.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/linux/hicolor/256x256/apps/chordkeep.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG platforms/linux/hicolor/512x512/apps/chordkeep.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "PNG previews/asset-preview.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "No raster/font dependency assets\\app-aubergine.svg",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "No raster/font dependency assets\\app-crimson.svg",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "No raster/font dependency assets\\app-ivory.svg",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "No raster/font dependency assets\\app-obsidian.svg",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "No raster/font dependency assets\\horizontal-crimson.svg",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "No raster/font dependency assets\\horizontal-obsidian.svg",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "No raster/font dependency assets\\horizontal-primary.svg",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "No raster/font dependency assets\\horizontal-white.svg",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "No raster/font dependency assets\\stacked-crimson.svg",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "No raster/font dependency assets\\stacked-obsidian.svg",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "No raster/font dependency assets\\stacked-primary.svg",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "No raster/font dependency assets\\stacked-white.svg",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "No raster/font dependency assets\\symbol-aubergine.svg",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "No raster/font dependency assets\\symbol-black.svg",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "No raster/font dependency assets\\symbol-crimson.svg",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "No raster/font dependency assets\\symbol-ivory.svg",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "No raster/font dependency assets\\symbol-obsidian.svg",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "No raster/font dependency assets\\symbol-white.svg",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "No raster/font dependency assets\\wordmark-obsidian.svg",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "No raster/font dependency previews\\app-aubergine-rounded.svg",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "No raster/font dependency previews\\app-crimson-rounded.svg",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "No raster/font dependency previews\\app-ivory-rounded.svg",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "No raster/font dependency previews\\app-obsidian-rounded.svg",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "No raster/font dependency previews\\asset-preview.svg",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "No raster/font dependency source\\master.svg",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "No raster/font dependency platforms\\android\\adaptive-background.svg",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "No raster/font dependency platforms\\android\\adaptive-foreground.svg",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "No raster/font dependency platforms\\dotnet-maui\\appicon.svg",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "No raster/font dependency platforms\\dotnet-maui\\appiconfg.svg",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "No raster/font dependency platforms\\dotnet-maui\\splash.svg",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "No raster/font dependency platforms\\web\\favicon.svg",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "No raster/font dependency platforms\\web\\safari-pinned-tab.svg",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "No raster/font dependency platforms\\apple\\composer-source\\background.svg",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "No raster/font dependency platforms\\apple\\composer-source\\foreground.svg",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "No raster/font dependency platforms\\linux\\hicolor\\scalable\\apps\\chordkeep.svg",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "Native XML parses",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "Catalog platforms\\apple\\AppIcon.appiconset/ChordKeep-Light-1024.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "Catalog platforms\\apple\\AppIcon.appiconset/ChordKeep-Dark-1024.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "Catalog platforms\\apple\\AppIcon.appiconset/ChordKeep-Tinted-1024.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "Catalog platforms\\apple\\legacy\\AppIcon.appiconset/icon-40.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "Catalog platforms\\apple\\legacy\\AppIcon.appiconset/icon-60.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "Catalog platforms\\apple\\legacy\\AppIcon.appiconset/icon-58.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "Catalog platforms\\apple\\legacy\\AppIcon.appiconset/icon-87.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "Catalog platforms\\apple\\legacy\\AppIcon.appiconset/icon-80.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "Catalog platforms\\apple\\legacy\\AppIcon.appiconset/icon-120.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "Catalog platforms\\apple\\legacy\\AppIcon.appiconset/icon-120.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "Catalog platforms\\apple\\legacy\\AppIcon.appiconset/icon-180.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "Catalog platforms\\apple\\legacy\\AppIcon.appiconset/icon-20.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "Catalog platforms\\apple\\legacy\\AppIcon.appiconset/icon-40.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "Catalog platforms\\apple\\legacy\\AppIcon.appiconset/icon-29.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "Catalog platforms\\apple\\legacy\\AppIcon.appiconset/icon-58.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "Catalog platforms\\apple\\legacy\\AppIcon.appiconset/icon-40.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "Catalog platforms\\apple\\legacy\\AppIcon.appiconset/icon-80.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "Catalog platforms\\apple\\legacy\\AppIcon.appiconset/icon-76.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "Catalog platforms\\apple\\legacy\\AppIcon.appiconset/icon-152.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "Catalog platforms\\apple\\legacy\\AppIcon.appiconset/icon-167.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "Catalog platforms\\apple\\legacy\\AppIcon.appiconset/icon-1024.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "Catalog platforms\\macos\\AppIcon.appiconset/icon_16x16.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "Catalog platforms\\macos\\AppIcon.appiconset/icon_16x16@2x.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "Catalog platforms\\macos\\AppIcon.appiconset/icon_32x32.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "Catalog platforms\\macos\\AppIcon.appiconset/icon_32x32@2x.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "Catalog platforms\\macos\\AppIcon.appiconset/icon_128x128.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "Catalog platforms\\macos\\AppIcon.appiconset/icon_128x128@2x.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "Catalog platforms\\macos\\AppIcon.appiconset/icon_256x256.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "Catalog platforms\\macos\\AppIcon.appiconset/icon_256x256@2x.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "Catalog platforms\\macos\\AppIcon.appiconset/icon_512x512.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "Catalog platforms\\macos\\AppIcon.appiconset/icon_512x512@2x.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "ICO frame sizes",
+      "passed": true,
+      "details": [
+        16,
+        20,
+        24,
+        32,
+        40,
+        48,
+        64,
+        96,
+        128,
+        256
+      ]
+    },
+    {
+      "check": "ICO frame 32 decodes",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "ICO frame 64 decodes",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "ICO frame 96 decodes",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "ICO frame 128 decodes",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "ICO frame 256 decodes",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "ICO frame 40 decodes",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "ICO frame 16 decodes",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "ICO frame 48 decodes",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "ICO frame 20 decodes",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "ICO frame 24 decodes",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "ICNS header and byte length",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "ICNS PNG chunks decode",
+      "passed": true,
+      "details": [
+        {
+          "type": "icp4",
+          "size": [
+            16,
+            16
+          ]
+        },
+        {
+          "type": "icp5",
+          "size": [
+            32,
+            32
+          ]
+        },
+        {
+          "type": "icp6",
+          "size": [
+            64,
+            64
+          ]
+        },
+        {
+          "type": "ic07",
+          "size": [
+            128,
+            128
+          ]
+        },
+        {
+          "type": "ic08",
+          "size": [
+            256,
+            256
+          ]
+        },
+        {
+          "type": "ic09",
+          "size": [
+            512,
+            512
+          ]
+        },
+        {
+          "type": "ic10",
+          "size": [
+            1024,
+            1024
+          ]
+        },
+        {
+          "type": "ic11",
+          "size": [
+            32,
+            32
+          ]
+        },
+        {
+          "type": "ic12",
+          "size": [
+            64,
+            64
+          ]
+        },
+        {
+          "type": "ic13",
+          "size": [
+            256,
+            256
+          ]
+        },
+        {
+          "type": "ic14",
+          "size": [
+            512,
+            512
+          ]
+        }
+      ]
+    },
+    {
+      "check": "ICNS opens in Pillow",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "Android 66dp circle",
+      "passed": true,
+      "details": {
+        "maximumRadius": 31.797,
+        "safeRadius": 33
+      }
+    },
+    {
+      "check": "PWA 80% diameter circle",
+      "passed": true,
+      "details": {
+        "maximumRadius": 396.252,
+        "safeRadius": 409.6
+      }
+    },
+    {
+      "check": "Web manifest icon-192.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "Web manifest icon-maskable-192.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "Web manifest icon-512.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "Web manifest icon-maskable-512.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "Web manifest icon-1024.png",
+      "passed": true,
+      "details": null
+    },
+    {
+      "check": "Web manifest icon-maskable-1024.png",
+      "passed": true,
+      "details": null
+    }
+  ],
+  "scope": "Local export, structure, dimensions, color and geometry validation. Not native device, Xcode, store submission or app integration validation."
+}

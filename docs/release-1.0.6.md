@@ -13,7 +13,7 @@ Android build number: 7. Windows: x64, unsigned installer.
 
 ## Build and verification
 
-The [Release packages run 37416308010](https://github.com/Ruach-Systems/ruach-chord-library/actions/runs/37416308010) succeeded and created an unpublished draft. Both packages originate from tag `v1.0.6`, source `25bf1bfdd1b59b49ff12fdee3861a842729ee2b5`, containing application changes from `50acc52` and the explicit release-instruction policy.
+The [Release packages run 37416308010](https://github.com/Ruach-Systems/ruach-chord-keep/actions/runs/37416308010) succeeded and created an unpublished draft. Both packages originate from tag `v1.0.6`, source `25bf1bfdd1b59b49ff12fdee3861a842729ee2b5`, containing application changes from `50acc52` and the explicit release-instruction policy.
 
 - All 148 .NET tests passed: 55 Core, 28 shared-session/navigation/sync, 7 native scanner and 58 Supabase tests. All 25 JavaScript checks passed. Windows and Android validation builds reported zero warnings/errors.
 - Windows silent installation, installed-file comparisons and uninstall passed on the hosted runner. The downloaded installer's product version is 1.0.6; its Authenticode status is `NotSigned`, as requested.
@@ -35,4 +35,4 @@ Install the Android APK over the existing signed release app; do not uninstall i
 
 Physical Android Caps Lock with quick-symbol taps, app foreground/reconnection triggers, QR camera and Back/gesture behavior, Google sign-in, real-data import and two-device synchronization remain device acceptance checks. Automated checks do not replace them.
 
-The repository is private; download access requires a GitHub account with access to its drafts. [GitHub release downloads](https://github.com/Ruach-Systems/ruach-chord-library/releases). Keep this release an unpublished draft. Future release generation requires a new explicit user instruction.
+The repository is private; download access requires a GitHub account with access to its drafts. [GitHub release downloads](https://github.com/Ruach-Systems/ruach-chord-keep/releases). Keep this release an unpublished draft. Future release generation requires a new explicit user instruction.

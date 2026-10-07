@@ -3411,6 +3411,7 @@ body:has(.sidebar.open) .fab {
 .chord-palette-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: minmax(44px, auto);
   gap: 4px;
   min-height: 0;
   overflow-y: auto;
@@ -3442,6 +3443,27 @@ body:has(.sidebar.open) .fab {
 .chord-palette-form:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .chord-palette-hint { flex-shrink: 0; color: var(--text-secondary); font-size: 10px; text-align: center; }
 #inline-chord-palette { top: 56px; max-height: calc(100% - 64px); }
+@media (max-width: 767px) {
+  .chord-palette {
+    top: var(--palette-top, 8px);
+    max-height: min(280px, calc(100% - 16px), var(--palette-viewport-space, 100dvh));
+    overflow: hidden;
+  }
+  #inline-chord-palette {
+    top: var(--palette-top, 48px);
+    max-height: min(280px, calc(100% - 56px), var(--palette-viewport-space, 100dvh));
+  }
+  /* Keep import actions, but reclaim introductory space in keyboard-sized views. */
+  html.compact-chord-viewport .modal-song .song-import-copy { display: none; }
+  html.compact-chord-viewport .modal-song .song-import-panel { padding: 4px 8px; }
+  html.compact-chord-viewport .modal-song .import-song-row { margin-top: 0; }
+}
+.chord-palette.has-compact-viewport, .chord-palette.has-compact-viewport .chord-palette-body { gap: 3px; }
+.chord-palette.has-compact-viewport { padding: 4px 6px; }
+.chord-palette.has-compact-viewport .chord-palette-hint { display: none; }
+/* With very little room above the IME, let the form selector scroll out too. */
+.chord-palette.has-short-viewport .chord-palette-body { overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+.chord-palette.has-short-viewport .chord-palette-grid { flex-shrink: 0; overflow-y: visible; }
 .song-content-section.is-content-editing .song-content,
 .song-content-section.is-content-editing .contenteditable-highlight,
 .inline-song-edit-surface .inline-song-content,
@@ -3555,8 +3577,7 @@ body:has(.sidebar.open) .fab {
 .song-add-button svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
 .song-add-button:not(:disabled):hover { background: var(--accent); color: var(--bg-primary); }
 .song-add-button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.song-add-button.is-added:disabled { width: 76px; opacity: 1; border-color: transparent; background: color-mix(in srgb, var(--success) 12%, transparent); color: color-mix(in srgb, var(--success) 60%, var(--text-primary)); cursor: default; }
-.song-add-button.is-added svg { width: 16px; height: 16px; }
+.song-add-button.is-added:disabled { opacity: 1; border-color: transparent; background: color-mix(in srgb, var(--success) 12%, transparent); color: color-mix(in srgb, var(--success) 60%, var(--text-primary)); cursor: default; }
 .song-selector-empty { padding: 28px 16px; color: var(--text-secondary); text-align: center; font-size: var(--font-size-sm); }
 
 /* Hidden Utility */
@@ -4532,3 +4553,5 @@ textarea:focus:not(:focus-visible) {
 .tour-actions .btn {
   min-width: 80px;
 }
+
+.app-product-logo { width: 32px; height: 32px; flex: none; border-radius: 8px; }

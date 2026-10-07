@@ -1,0 +1,5 @@
+# Preserve exported asset bytes and their SHA-256 inventories on every platform.
+* -text
+*.pdf binary
+*.json whitespace=cr-at-eol
+*OFL.txt whitespace=-blank-at-eol

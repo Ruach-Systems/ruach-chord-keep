@@ -1,0 +1,20 @@
+{
+  "product": "ChordKeep",
+  "parent": "RUACH",
+  "kitVersion": "1.2",
+  "date": "2026-10-07",
+  "symbol": "Royal Folio",
+  "applications": {
+    "native": "ChordKeep"
+  },
+  "master": "source/master.svg",
+  "generator": "source/build_assets.py",
+  "fonts": {
+    "Manrope-800.ttf": "954dd60d6eb9e17b2f67489f2db3134d227f48d087a2ab6b6477090ad1b7fb31",
+    "Manrope-OFL.txt": "58172e0c0fac2cda8a37b348164bb55e44b0e69051e557e92b1d3f6910141f7b"
+  },
+  "scope": "Accepted name and emblem; vector/platform asset kit. Native device and store verification separate.",
+  "archive": "ChordKeep-Royal-Folio-v1.2.zip",
+  "archiveRoot": "ChordKeep-Royal-Folio",
+  "approvalReference": "references/approved-royal-folio.png"
+}

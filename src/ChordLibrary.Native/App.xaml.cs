@@ -14,7 +14,7 @@ public partial class App : Application
 
 	protected override Window CreateWindow(IActivationState? activationState)
 	{
-		var window = new Window(new MainPage()) { Title = "Chord Library" };
+		var window = new Window(new MainPage()) { Title = "ChordKeep" };
 		window.Resumed += (_, _) => syncSignals.Resume();
 		window.Activated += (_, _) => syncSignals.Resume();
 		return window;

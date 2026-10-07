@@ -137,8 +137,8 @@ jobs:
         run: |
           $root = "artifacts/release/$env:RELEASE_VERSION"
           New-Item -ItemType Directory -Path artifacts/downloads | Out-Null
-          Copy-Item "$root/windows/ChordLibrary-*-setup.exe" artifacts/downloads
-          Copy-Item "$root/android/ChordLibrary-*-android.apk" artifacts/downloads
+          Copy-Item "$root/windows/ChordKeep-*-setup.exe" artifacts/downloads
+          Copy-Item "$root/android/ChordKeep-*-android.apk" artifacts/downloads
           $unsigned = Test-Path "$root/windows/WINDOWS-UNSIGNED.txt"
           if ($unsigned) { Copy-Item "$root/windows/WINDOWS-UNSIGNED.txt" artifacts/downloads }
           @{ version = $env:RELEASE_VERSION; androidBuildNumber = [int]$env:BUILD_NUMBER; commit = $env:GITHUB_SHA; windowsSigned = !$unsigned } |

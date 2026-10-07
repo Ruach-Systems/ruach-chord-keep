@@ -20,7 +20,7 @@ Local migration requires no Supabase schema change. The retained old JSON is a p
 
 Source: `a9fcb1654de4a5f3e32ab6b6f86dc9c2dbee4d0f`, tag `v1.0.7`.
 
-The [Release packages run 37432177932](https://github.com/Ruach-Systems/ruach-chord-library/actions/runs/37432177932) succeeded and created this unpublished draft.
+The [Release packages run 37432177932](https://github.com/Ruach-Systems/ruach-chord-keep/actions/runs/37432177932) succeeded and created this unpublished draft.
 
 - All 159 .NET tests passed (65 Core, 29 shared session, 7 native scanner and 58 Supabase), plus 25 JavaScript checks. Windows/Android validation builds had zero warnings/errors.
 - Windows silent installation, installed-file comparison and uninstall passed on the runner. The downloaded installer reports product version 1.0.7 and is unsigned, as requested.
@@ -36,4 +36,4 @@ Other assets: `SHA256SUMS.txt`, `release-info.json` and `WINDOWS-UNSIGNED.txt`.
 
 Physical-device upgrade, offline edit/restart/export and two-device synchronization still require acceptance testing. Keep this release an unpublished draft. Future release generation requires a new explicit instruction.
 
-The repository is private; downloading from the draft requires a GitHub account with repository access. [Open GitHub Releases](https://github.com/Ruach-Systems/ruach-chord-library/releases) and select the 1.0.7 draft. GitHub can change a draft's direct URL when its details are edited.
+The repository is private; downloading from the draft requires a GitHub account with repository access. [Open GitHub Releases](https://github.com/Ruach-Systems/ruach-chord-keep/releases) and select the 1.0.7 draft. GitHub can change a draft's direct URL when its details are edited.

@@ -16,8 +16,11 @@
 }
 @if (accountOpen)
 {
-    <div class="native-overlay"><section class="native-dialog @(busy ? "native-busy" : "")" role="dialog" aria-modal="true" aria-labelledby="account-title">
-        <h2 id="account-title">Account & sync</h2>
+    <div class="native-overlay"><section class="native-dialog native-account @(busy ? "native-busy" : "")" role="dialog" aria-modal="true" aria-labelledby="account-title">
+        <img class="native-account-logo native-account-logo-light" src="_content/ChordLibrary.Shared/images/chordkeep-wordmark.svg" alt="ChordKeep" />
+        <img class="native-account-logo native-account-logo-dark" src="_content/ChordLibrary.Shared/images/chordkeep-wordmark-white.svg" alt="ChordKeep" />
+        <div class="native-account-eyebrow">A RUACH product · Governed by the Spirit.</div>
+        <h2 id="account-title">@(Session.SignedIn ? "Account & sync" : "Your library, wherever you go.")</h2>
         @if (Session.SignedIn)
         {
             <p>Signed in as <strong>@Session.Email</strong></p>
@@ -30,7 +33,7 @@
         {
             <p>Sign in with Google to sync songs and setlists across your devices. Your local and account libraries are kept separate.</p>
             @if (Session.HasAccountLibrary) { <p class="native-status">Your session expired. This device still has your account library. Sign in again to sync.</p><button class="btn btn-secondary" @onclick="SignOut">Return to local library</button> }
-            <div class="native-actions"><button class="btn btn-primary" disabled="@(!Platform.IsNative)" @onclick="GoogleSignIn">Continue with Google</button></div>
+            <div class="native-actions"><button class="btn native-google" disabled="@(!Platform.IsNative)" @onclick="GoogleSignIn"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="#4285F4" d="M21.6 12.2c0-.7-.1-1.5-.2-2.2H12v4.2h5.4a4.7 4.7 0 0 1-2 3.1v2.6h3.2c1.9-1.8 3-4.4 3-7.7Z"/><path fill="#34A853" d="M12 22c2.7 0 5-.9 6.6-2.4l-3.2-2.5c-.9.6-2 1-3.4 1-2.6 0-4.9-1.8-5.7-4.2H3v2.6A10 10 0 0 0 12 22Z"/><path fill="#FBBC05" d="M6.3 13.9a6 6 0 0 1 0-3.8V7.5H3a10 10 0 0 0 0 9l3.3-2.6Z"/><path fill="#EA4335" d="M12 5.9c1.5 0 2.8.5 3.8 1.5l2.9-2.9A10 10 0 0 0 3 7.5l3.3 2.6C7.1 7.7 9.4 5.9 12 5.9Z"/></svg><span>Continue with Google</span></button></div>
             @if (!Platform.IsNative) { <small>Google sign-in is available in the Windows and Android apps.</small> }
         }
         else { <p>Account sign-in is unavailable in this build. You can continue using your local library.</p> }

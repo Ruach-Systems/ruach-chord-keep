@@ -14,8 +14,38 @@
     const selection = getSelection(); selection.removeAllRanges(); selection.addRange(range); document.dispatchEvent(new Event('selectionchange'));
   };
   const stored = () => JSON.parse(LibraryStorage.getItem('chord-library-songs'));
+  const checkKeyboardPalette = async (paletteId, editor) => {
+    if (innerWidth >= 768) return; // Mobile-only layout; desktop geometry is checked separately.
+    const viewport = window.visualViewport, host = $(paletteId);
+    assert(viewport, 'VisualViewport unavailable in this browser fixture');
+    const original = ['height', 'offsetTop'].map(name => [name, Object.getOwnPropertyDescriptor(viewport, name)]);
+    const saved = JSON.stringify(stored());
+    try {
+      for (const space of [176, 120]) {
+        const bottom = Math.min(innerHeight, host.getBoundingClientRect().top + space + 8);
+        Object.defineProperty(viewport, 'height', { configurable: true, value: bottom });
+        Object.defineProperty(viewport, 'offsetTop', { configurable: true, value: 0 });
+        viewport.dispatchEvent(new Event('resize')); await settled(); await settled();
+        assert(host.getBoundingClientRect().bottom <= bottom - 7, 'Palette runs under simulated keyboard');
+        assert(host.getBoundingClientRect().height <= 280, 'Mobile palette is too tall');
+        const scroll = host.classList.contains('has-short-viewport') ? host.querySelector('.chord-palette-body') : host.querySelector('.chord-palette-grid');
+        assert(scroll.clientHeight >= 44 && scroll.scrollHeight > scroll.clientHeight, 'No usable scroll area for chord buttons');
+        scroll.scrollTop = scroll.scrollHeight; await settled();
+        const button = key(paletteId, 'G#'), rect = button.getBoundingClientRect(), bounds = scroll.getBoundingClientRect();
+        assert(rect.top >= bounds.top - 1 && rect.bottom <= bounds.bottom + 1, 'Last chord cannot scroll fully into view');
+        button.click();
+        assert((editor.isContentEditable ? editor.innerText : editor.value).includes('G#|'), 'Scrolled chord did not insert');
+        assert(document.activeElement === editor, 'Scrolled chord lost editor focus');
+      }
+      assert(JSON.stringify(stored()) === saved, 'Keyboard resizing saved an uncommitted draft');
+    } finally {
+      for (const [name, descriptor] of original) { if (descriptor) Object.defineProperty(viewport, name, descriptor); else delete viewport[name]; }
+      viewport.dispatchEvent(new Event('resize')); await settled(); await settled();
+    }
+  };
   try {
     $('app').innerHTML = await (await fetch('../src/ChordLibrary.Shared/Assets/library.html')).text();
+    document.querySelector('.app-product-logo').src='../src/ChordLibrary.Shared/wwwroot/images/chordkeep.svg';
     await NativeBridge.initialize({ invokeMethodAsync: async () => {} }, { 'chord-library-tour-seen': '2.4', 'chord-library-tour-features-seen': '2.4' });
     NativeBridge.configure({ native: false });
     for (const file of ['qrcode.js','setlist-sort.js','app.js']) await new Promise((resolve,reject) => {
@@ -118,6 +148,10 @@
       key('inline-chord-palette','C#').click();assert($('song-content').innerText==='C| C#m7|verse','Restore lost insertion point');
       assert(JSON.stringify(stored())===before,'Toggle saved a draft');
     });
+    await check('inline palette stays above an overlay keyboard and scrolls to the last chord', async () => {
+      form('inline-chord-palette', ''); textRange(0);
+      await checkKeyboardPalette('inline-chord-palette', $('song-content'));
+    });
     await check('new-song minimize/show preserves text selection and its chord form', async () => {
       $('btn-save-content-edit').click();$('btn-add-song').click();await settled();
       const editor=$('song-content-input'), host=$('song-chord-palette'), toggle=host.querySelector('.chord-palette-toggle');
@@ -125,6 +159,13 @@
       assert(host.querySelector('.chord-palette-body').hidden && getComputedStyle(editor).paddingRight==='80px','Textarea minimize failed');
       toggle.click();key('song-chord-palette','A#').click();assert(editor.value==='Intro A#dim|','Textarea selection/form lost');
       editor.value='';$('btn-close-song-modal').click();$('btn-inline-edit').click();await settled();
+    });
+    await check('new-song palette adapts to an overlay keyboard without losing the draft', async () => {
+      $('btn-save-content-edit').click(); $('btn-add-song').click(); await new Promise(resolve => setTimeout(resolve, 300));
+      const editor = $('song-content-input'); editor.value = 'Intro '; editor.focus(); editor.setSelectionRange(6, 6);
+      form('song-chord-palette', ''); editor.scrollIntoView({ block: 'center' }); await settled();
+      await checkKeyboardPalette('song-chord-palette', editor);
+      editor.value = ''; $('btn-close-song-modal').click(); $('btn-inline-edit').click(); await settled();
     });
     form('inline-chord-palette','');textRange(0);
     results.push(results.some(line=>line.startsWith('FAIL'))?'CHECKS FAILED':`ALL ${results.length} CHECKS PASSED; inline preview ready.`);

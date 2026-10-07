@@ -20,4 +20,4 @@ The repository is private. Sign into an account with draft-release access on you
 
 SHA-256: `21df2ff25fd19a16eba94f0bff39081e4497d66ab05e25de62466435b6a680dc`.
 
-[GitHub release downloads](https://github.com/Ruach-Systems/ruach-chord-library/releases)
+[GitHub release downloads](https://github.com/Ruach-Systems/ruach-chord-keep/releases)

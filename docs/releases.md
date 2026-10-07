@@ -1,12 +1,14 @@
 # Build and distribute releases
 
+The product is now **ChordKeep**. Future workflow runs use ChordKeep release titles and download filenames; previously published Chord Library assets keep their original names. The application ID, signing identity and Windows installer AppId remain stable. See [identity and upgrade compatibility](identity.md). Workflows remain manual and require an explicit release instruction.
+
 The source repository is private. GitHub Releases and Actions downloads require repository access. General distribution can use a separate public download repository, a website, or app stores without making this source public. This workflow does not change repository visibility, deploy database migrations, publish to stores, or update installed apps automatically.
 
 Releases are created only on an explicit user request for each release. Code changes, commits, pushes and successful validation do not authorize generating a release or draft. The release workflows are manually dispatched; publishing a draft requires separate instruction.
 
 ## Release button
 
-1. Open [Actions → Release packages](https://github.com/Ruach-Systems/ruach-chord-library/actions/workflows/release.yml).
+1. Open [Actions → Release packages](https://github.com/Ruach-Systems/ruach-chord-keep/actions/workflows/release.yml).
 2. Click **Run workflow**, keep branch **main**, enter a new three-part version such as `1.0.0`, and an Android build number such as `1`. Increase the build number for every published update; it is Android's upgrade sequence, independent of the display version.
 3. Leave **Allow unsigned Windows installer** selected until a trusted Windows certificate is configured. The resulting installer can show Windows unknown-publisher warnings. Selecting this option permits unsigned output; an available certificate is still used and signing failures stop the job.
 4. Preparation reserves the version's Git tag at the exact source commit. The workflow then runs tests, builds an x64 Windows installer and signed Android APK, tests silent Windows installation/uninstall, verifies the APK signature, generates SHA-256 checksums and creates a **draft release**. Missing Android signing secrets, invalid input, failed checks or a failed package stop the release. Each version is new; existing releases are not overwritten.

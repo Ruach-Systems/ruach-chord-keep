@@ -1,0 +1,10 @@
+<!-- Merge these ItemGroups into the existing project; replace existing icon/splash entries. -->
+<Project>
+<ItemGroup>
+  <MauiIcon Include="Resources/AppIcon/appicon.svg" ForegroundFile="Resources/AppIcon/appiconfg.svg" Color="#B21F32" />
+  <MauiSplashScreen Include="Resources/Splash/splash.svg" Color="#B21F32" BaseSize="256,256" />
+</ItemGroup>
+<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
+  <MauiIcon Update="Resources/AppIcon/appicon.svg" ForegroundScale="0.665509259" />
+</ItemGroup>
+</Project>

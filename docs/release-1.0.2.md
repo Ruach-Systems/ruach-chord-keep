@@ -19,4 +19,4 @@ Install the Windows setup executable or signed Android APK. Android build 3 uses
 
 No new database migration is required. This remains an unpublished draft for device testing. Physical Android WebView behavior and two-device cloud synchronization still require verification before publication. Distribution remains private while the source repository is private.
 
-Draft release: [Chord Library 1.0.2](https://github.com/Ruach-Systems/ruach-chord-library/releases). It remains unpublished.
+Draft release: [Chord Library 1.0.2](https://github.com/Ruach-Systems/ruach-chord-keep/releases). It remains unpublished.

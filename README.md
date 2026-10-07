@@ -1,4 +1,6 @@
-# Chord Library — .NET MAUI Blazor Hybrid
+# ChordKeep — .NET MAUI Blazor Hybrid
+
+**ChordKeep** is a RUACH product for keeping chord sheets and arranging setlists, formerly named Chord Library. The approved Royal Folio crown-and-musical-folio emblem is its distinct app logo. See [identity and upgrade compatibility](docs/identity.md) and [platform asset kit](branding/chordkeep/README.md).
 
 Windows and Android native app mirroring louieje-g/chordlibrary at commit `230ad36e863f3175438a92520b3a567d516c2afe`.
 
@@ -21,7 +23,7 @@ Open `ChordLibrary.slnx` in Visual Studio with the .NET MAUI workload. Select `C
 
 The preview binds only to `http://127.0.0.1:5288`. It uses the same Razor/JS/CSS and Core services, with a separate `.local/preview-library` folder. Native features (secure storage, file sharing, Android live QR scanning and image import and Google callbacks) belong to the MAUI host. Preview credentials exist only in its circuit memory; the preview is not intended for hosting.
 
-Native Windows output is under `src/ChordLibrary.Native/bin/Debug/net10.0-windows10.0.19041.0/win-x64/`. The signed **development** Android APK is `src/ChordLibrary.Native/bin/Debug/net10.0-android/com.louiejeg.chordlibrary-Signed.apk`; this build is also copied to `artifacts/packages/ChordLibrary-Android-debug.apk`. Android assemblies are embedded so the APK does not depend on Visual Studio fast deployment. Android release publishing requires your own signing identity. Windows needs WebView2 and the MAUI Windows runtime dependencies.
+Native Windows output is under `src/ChordLibrary.Native/bin/Debug/net10.0-windows10.0.19041.0/win-x64/`. The signed **development** Android APK is `src/ChordLibrary.Native/bin/Debug/net10.0-android/com.louiejeg.chordlibrary-Signed.apk`; this build is also copied to `artifacts/packages/ChordKeep-Android-debug.apk`. Android assemblies are embedded so the APK does not depend on Visual Studio fast deployment. Android release publishing requires your own signing identity. Windows needs WebView2 and the MAUI Windows runtime dependencies.
 
 ## Supabase and existing data
 
@@ -57,3 +59,5 @@ Account changes clear prior drafts, hidden content, selections and undo actions.
 Tests cover original export compatibility, atomic storage and account boundaries, multi-device conflict cases, real-shaped Supabase HTTP requests through fake handlers, token rotation, PKCE/recovery, pagination, chord/QR logic and JS persistence retries. Supabase SQL/RLS tests are in `supabase/tests/rls_and_revisions.sql` and must be run against an authorized development database.
 
 See `docs/validation.md` for observed build, browser and hosted results. No store release or device testing should be inferred from compilation alone.
+
+The approved RUACH interface is implemented with local Inter/Manrope fonts and shared light/dark styling. Royal Folio retains the approved proposal placements; the top-bar icon is hidden when viewing or editing a song/chord sheet. See the [implemented UI reference](docs/branding-review/index.html).

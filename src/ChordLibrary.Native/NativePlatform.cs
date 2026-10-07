@@ -22,7 +22,7 @@ public sealed class NativePlatform : IAppPlatform
 #endif
     public async Task<string?> PickJsonAsync()
     {
-        var file = await MainThread.InvokeOnMainThreadAsync(() => FilePicker.Default.PickAsync(new PickOptions { PickerTitle = "Import Chord Library backup", FileTypes = new FilePickerFileType(new Dictionary<DevicePlatform, IEnumerable<string>> { [DevicePlatform.WinUI] = [".json"], [DevicePlatform.Android] = ["application/json", "text/plain", "application/octet-stream"] }) }));
+        var file = await MainThread.InvokeOnMainThreadAsync(() => FilePicker.Default.PickAsync(new PickOptions { PickerTitle = "Import ChordKeep backup", FileTypes = new FilePickerFileType(new Dictionary<DevicePlatform, IEnumerable<string>> { [DevicePlatform.WinUI] = [".json"], [DevicePlatform.Android] = ["application/json", "text/plain", "application/octet-stream"] }) }));
         if (file is null) return null;
         await using var stream = await file.OpenReadAsync();
         using var reader = new StreamReader(stream, Encoding.UTF8, true);
@@ -34,10 +34,10 @@ public sealed class NativePlatform : IAppPlatform
     {
         var name = Path.GetFileName(filename);
         foreach (var character in Path.GetInvalidFileNameChars()) name = name.Replace(character, '_');
-        if (string.IsNullOrWhiteSpace(name)) name = "chord-library-backup.json";
+        if (string.IsNullOrWhiteSpace(name)) name = "chordkeep-backup.json";
         var folder = Path.Combine(FileSystem.CacheDirectory, "exports"); Directory.CreateDirectory(folder);
         var path = Path.Combine(folder, name); await File.WriteAllTextAsync(path, json, Encoding.UTF8);
-        await MainThread.InvokeOnMainThreadAsync(() => Share.Default.RequestAsync(new ShareFileRequest("Export Chord Library", new ShareFile(path, "application/json"))));
+        await MainThread.InvokeOnMainThreadAsync(() => Share.Default.RequestAsync(new ShareFileRequest("Export ChordKeep", new ShareFile(path, "application/json"))));
     }
     public bool SupportsQrImport => DeviceInfo.Platform == DevicePlatform.Android;
     private readonly SemaphoreSlim qrOperation = new(1, 1);
@@ -104,7 +104,7 @@ public sealed class NativePlatform : IAppPlatform
             var query = callback is null ? new Dictionary<string,string>() : Query(callback);
             var valid = callback is not null && callback.Authority == expected.Authority && callback.AbsolutePath == expected.AbsolutePath && query.GetValueOrDefault("app_state") == expectedState && (query.ContainsKey("code") || query.ContainsKey("error"));
             context.Response.StatusCode = valid ? 200 : 400;
-            var content = Encoding.UTF8.GetBytes(valid ? "<!doctype html><html><body><h1>Return to Chord Library</h1><p>The app is checking your sign-in. You may close this tab.</p></body></html>" : "Unrecognized sign-in callback.");
+            var content = Encoding.UTF8.GetBytes(valid ? "<!doctype html><html><body><h1>Return to ChordKeep</h1><p>The app is checking your sign-in. You may close this tab.</p></body></html>" : "Unrecognized sign-in callback.");
             context.Response.ContentType = "text/html; charset=utf-8"; context.Response.ContentLength64 = content.Length;
             await context.Response.OutputStream.WriteAsync(content,timeout.Token); context.Response.Close();
             if(valid) return callback!;

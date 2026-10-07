@@ -36,6 +36,7 @@
   };
   try {
     $('app').innerHTML = await (await fetch('../src/ChordLibrary.Shared/Assets/library.html')).text();
+    document.querySelector('.app-product-logo').src='../src/ChordLibrary.Shared/wwwroot/images/chordkeep.svg';
     await NativeBridge.initialize({ invokeMethodAsync: async (method, data) => { if (method === 'SaveStorage') saves.push(data); } }, { 'chord-library-tour-seen': '2.4' });
     NativeBridge.configure({ native: false });
     for (const file of ['qrcode.js', 'setlist-sort.js', 'app.js']) await new Promise((resolve, reject) => {
@@ -164,13 +165,13 @@
       $('btn-add-songs-to-setlist').click();
       const add = id => $('song-selector').querySelector('.song-add-button[data-id="' + id + '"]');
       assert(!$('song-selector').querySelector('input[type="checkbox"]') && !$('btn-confirm-add-songs'), 'Checkbox/bulk selection remains');
-      assert(add('song-0').disabled && add('song-0').textContent.includes('Added'), 'Existing song not marked Added');
+      assert(add('song-0').disabled && !add('song-0').textContent.trim() && add('song-0').getAttribute('aria-label').includes('already in this setlist') && add('song-0').querySelector('svg path').getAttribute('d') === 'm5 12 4 4L19 6', 'Existing song needs an accessible icon-only check');
       const unchanged = add('song-3').closest('.song-selector-item'), first = add('song-8');
       first.click(); assert(equal(stored(), [...original, 'song-8']), 'First plus did not save immediately');
       add('song-2').click(); await NativeBridge.flush();
       assert(equal(stored(), [...original, 'song-8', 'song-2']), 'Option order replaced click order');
       assert(!$('add-songs-modal').classList.contains('hidden') && add('song-3').closest('.song-selector-item') === unchanged, 'Picker closed or neighboring row replaced');
-      assert(first === add('song-8') && first.disabled && first.textContent.includes('Added'), 'Added button state/identity stale');
+      assert(first === add('song-8') && first.disabled && !first.textContent.trim() && first.getAttribute('aria-label').includes('already in this setlist') && first.querySelector('svg path').getAttribute('d') === 'm5 12 4 4L19 6', 'Added button state/identity stale');
       const writes = saves.length; first.click(); first.dispatchEvent(new MouseEvent('click', { bubbles: true })); await NativeBridge.flush();
       assert(equal(stored(), [...original, 'song-8', 'song-2']) && saves.length === writes, 'Repeated add created duplicate or extra write');
     });

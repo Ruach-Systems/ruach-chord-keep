@@ -2,9 +2,9 @@ param([Parameter(Mandatory)][string] $Version)
 . "$PSScriptRoot/release-common.ps1"
 Assert-ReleaseVersion $Version 1
 $root = Split-Path -Parent $PSScriptRoot
-$package = Join-Path $root "artifacts/release/$Version/windows/ChordLibrary-$Version-windows-x64-setup.exe"
+$package = Join-Path $root "artifacts/release/$Version/windows/ChordKeep-$Version-windows-x64-setup.exe"
 $uninstallKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\{D72F1DE3-93E7-4729-BC61-5CC89143D125}_is1'
-if (Test-Path $uninstallKey) { throw 'Chord Library is already installed for this user. Use a clean test account/runner.' }
+if (Test-Path $uninstallKey) { throw 'ChordKeep is already installed for this user. Use a clean test account/runner.' }
 $testRoot = Join-Path ([IO.Path]::GetTempPath()) ("chordlibrary-install-test-" + [guid]::NewGuid().ToString('N'))
 $installDir = Join-Path $testRoot 'app'
 New-Item -ItemType Directory -Path $testRoot | Out-Null

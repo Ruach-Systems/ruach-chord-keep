@@ -1,0 +1,10 @@
+<!-- Merge paths into existing package manifest; do not replace the manifest. -->
+<uap:VisualElements xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  DisplayName="Chord Library" Description="Songs, chords and setlists"
+  BackgroundColor="#B21F32"
+  Square44x44Logo="Assets\Square44x44Logo.png"
+  Square150x150Logo="Assets\Square150x150Logo.png">
+  <uap:DefaultTile Square71x71Logo="Assets\Square71x71Logo.png"
+    Wide310x150Logo="Assets\Wide310x150Logo.png" Square310x310Logo="Assets\Square310x310Logo.png"/>
+  <uap:SplashScreen Image="Assets\SplashScreen.png" BackgroundColor="#B21F32"/>
+</uap:VisualElements>

@@ -13,34 +13,40 @@
 
 [Setup]
 AppId={{D72F1DE3-93E7-4729-BC61-5CC89143D125}
-AppName=Chord Library
+AppName=ChordKeep
 AppVersion={#AppVersion}
 AppPublisher=Ruach Systems
-AppPublisherURL=https://github.com/Ruach-Systems/ruach-chord-library
-DefaultDirName={localappdata}\Programs\Ruach Systems\Chord Library
-DefaultGroupName=Chord Library
+AppPublisherURL=https://github.com/Ruach-Systems/ruach-chord-keep
+DefaultDirName={localappdata}\Programs\Ruach Systems\ChordKeep
+DefaultGroupName=ChordKeep
+UsePreviousAppDir=yes
+UsePreviousGroup=yes
 DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 MinVersion=10.0.17763
 OutputDir={#OutputDir}
-OutputBaseFilename=ChordLibrary-{#AppVersion}-windows-x64-setup
+OutputBaseFilename=ChordKeep-{#AppVersion}-windows-x64-setup
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
 CloseApplications=yes
 UninstallDisplayIcon={app}\ChordLibrary.Native.exe
+SetupIconFile=..\..\branding\chordkeep\platforms\windows\ChordKeep.ico
 
 [Files]
 Source: "{#PublishDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#WebViewBootstrapper}"; Flags: dontcopy
 
+[InstallDelete]
+Type: files; Name: "{group}\Chord Library.lnk"
+
 [Icons]
-Name: "{group}\Chord Library"; Filename: "{app}\ChordLibrary.Native.exe"
+Name: "{group}\ChordKeep"; Filename: "{app}\ChordLibrary.Native.exe"
 
 [Run]
-Filename: "{app}\ChordLibrary.Native.exe"; Description: "Open Chord Library"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\ChordLibrary.Native.exe"; Description: "Open ChordKeep"; Flags: nowait postinstall skipifsilent
 
 [Code]
 function HasWebView2: Boolean;

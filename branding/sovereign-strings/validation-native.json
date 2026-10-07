@@ -1,0 +1,25 @@
+{
+  "scope": "Resource compilation and PDF rendering; no app linking, device or store validation.",
+  "android": {
+    "passed": true,
+    "compiler": "AAPT2 from Microsoft.Android.Sdk.Windows 36.1.69",
+    "sourceFiles": 19,
+    "compiledResources": 19
+  },
+  "pdf": {
+    "passed": true,
+    "renderer": "Poppler and PDFium",
+    "pages": 6,
+    "pageSize": [
+      600,
+      600
+    ],
+    "visibleBounds": [
+      119,
+      75,
+      480,
+      524
+    ],
+    "checks": "All six variants rendered; same geometry and no clipping. White and ivory inspected on dark rendering surfaces."
+  }
+}

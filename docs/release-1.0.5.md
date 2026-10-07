@@ -11,7 +11,7 @@ Android build number: 6. Windows: x64, unsigned installer. This full draft inclu
 
 ## Build and verification
 
-The [automated Release packages run](https://github.com/Ruach-Systems/ruach-chord-library/actions/runs/37377033320) succeeded and created the draft. Both packages originate from tag `v1.0.5`, source `aa69a6e4a755a8b5e5aaa9dda6018f6feedfdd7a`.
+The [automated Release packages run](https://github.com/Ruach-Systems/ruach-chord-keep/actions/runs/37377033320) succeeded and created the draft. Both packages originate from tag `v1.0.5`, source `aa69a6e4a755a8b5e5aaa9dda6018f6feedfdd7a`.
 
 - All 55 Core, 22 shared-session/navigation, 7 native scanner and 58 Supabase tests passed. All 23 JavaScript checks passed. Windows and Android verification builds reported zero warnings/errors.
 - Windows silent installation, installed-file comparisons and uninstall passed on the hosted runner. The downloaded installer's product version is 1.0.5 and its Authenticode status is `NotSigned`, as requested.
@@ -33,4 +33,4 @@ Install the Android APK over the existing signed release app; do not uninstall i
 
 Physical Android Back/gesture and QR camera behavior, Google sign-in, import and two-device synchronization remain device acceptance checks. The automated results do not replace these checks.
 
-The repository is private; download access requires a GitHub account with access to its drafts. [GitHub release downloads](https://github.com/Ruach-Systems/ruach-chord-library/releases). The release remains an unpublished draft.
+The repository is private; download access requires a GitHub account with access to its drafts. [GitHub release downloads](https://github.com/Ruach-Systems/ruach-chord-keep/releases). The release remains an unpublished draft.

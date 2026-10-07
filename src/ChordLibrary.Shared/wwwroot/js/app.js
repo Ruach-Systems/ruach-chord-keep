@@ -1,5 +1,5 @@
 /**
- * Chord Library - A mobile-first offline chord library application
+ * ChordKeep - A mobile-first offline chord library application
  * Features: Song management, Chord transposition, Setlists, Swipe navigation
  */
 
@@ -793,7 +793,7 @@
       dom.emptyState.classList.remove('hidden');
       dom.songDetail.classList.add('hidden');
       dom.setlistDetail.classList.add('hidden');
-      dom.appTitle.textContent = 'Chord Library';
+      dom.appTitle.textContent = 'ChordKeep';
       stopAutoScroll();
       setSongActionsVisible(false);
       renderHomeDashboard();
@@ -886,7 +886,7 @@
       dom.songDetail.classList.add('hidden');
       dom.setlistDetail.classList.add('hidden');
       // Reset header title
-      dom.appTitle.textContent = 'Chord Library';
+      dom.appTitle.textContent = 'ChordKeep';
       renderHomeDashboard();
       return;
     }
@@ -895,7 +895,7 @@
     dom.songDetail.classList.add('hidden');
     dom.setlistDetail.classList.remove('hidden');
 
-    dom.appTitle.textContent = 'Chord Library';
+    dom.appTitle.textContent = 'ChordKeep';
 
     dom.setlistTitle.textContent = setlist.name;
     dom.setlistSongs.dataset.setlistId = setlist.id;
@@ -1063,7 +1063,7 @@
     dom.emptyState.classList.remove('hidden');
     dom.songDetail.classList.add('hidden');
     dom.setlistDetail.classList.add('hidden');
-    dom.appTitle.textContent = 'Chord Library';
+    dom.appTitle.textContent = 'ChordKeep';
     $('btn-home').classList.add('hidden');
     $('btn-autoscroll').classList.add('hidden');
     setSongActionsVisible(false);
@@ -1477,7 +1477,6 @@
         <button class="song-add-button${added ? ' is-added' : ''}" type="button" data-id="${escapeHtml(String(song.id))}"
           aria-label="${escapeHtml(added ? song.title + ' is already in this setlist' : 'Add ' + song.title + ' to setlist')}" ${added ? 'disabled' : ''}>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="${added ? 'm5 12 4 4L19 6' : 'M12 5v14M5 12h14'}"></path></svg>
-          ${added ? '<span>Added</span>' : ''}
         </button>
       </div>`;
     }).join('') || `<div class="song-selector-empty" role="status">${query ? 'No songs match your search.' : 'Your library is empty. Create or import a song first.'}</div>`);
@@ -1804,7 +1803,7 @@
     };
     try {
       await NativeBridge.exportFile(
-        `chord-library-backup-${new Date().toISOString().slice(0, 10)}.json`,
+        `chordkeep-backup-${new Date().toISOString().slice(0, 10)}.json`,
         JSON.stringify(data, null, 2));
       showToast('Backup prepared', 'success');
     } catch (error) {
@@ -2831,10 +2830,62 @@
     });
   }
 
+  function initChordPaletteViewport() {
+    const palettes = [$('inline-chord-palette'), $('legacy-chord-palette'), $('song-chord-palette')];
+    let queued = false;
+    const update = () => {
+      queued = false;
+      const viewport = window.visualViewport;
+      const height = viewport?.height ?? window.innerHeight;
+      const bottom = (viewport?.offsetTop ?? 0) + height;
+      const compact = window.innerWidth < 768 && height <= 480;
+      if (document.documentElement.classList.contains('compact-chord-viewport') !== compact)
+        document.documentElement.classList.toggle('compact-chord-viewport', compact);
+      for (const palette of palettes) {
+        if (window.innerWidth >= 768 || !palette.getClientRects().length) {
+          for (const name of ['--palette-viewport-space', '--palette-top'])
+            if (palette.style.getPropertyValue(name)) palette.style.removeProperty(name);
+          for (const name of ['has-compact-viewport', 'has-short-viewport'])
+            if (palette.classList.contains(name)) palette.classList.remove(name);
+          continue;
+        }
+        // VisualViewport can shrink for the IME even when the layout viewport does not.
+        const parent = palette.parentElement.getBoundingClientRect();
+        const form = palette.closest('form')?.getBoundingClientRect();
+        const footer = palette.closest('form')?.querySelector('.song-modal-actions')?.getBoundingClientRect();
+        const top = Math.max(parent.top + (palette.id === 'inline-chord-palette' ? 48 : 8), viewport?.offsetTop ?? 0, form?.top ?? 0);
+        const offset = Math.round(top - parent.top) + 'px';
+        if (palette.style.getPropertyValue('--palette-top') !== offset) palette.style.setProperty('--palette-top', offset);
+        const available = Math.max(0, Math.floor(Math.min(bottom, parent.bottom, form?.bottom ?? bottom, footer?.top ?? bottom) - top - 8));
+        const value = available + 'px';
+        if (palette.style.getPropertyValue('--palette-viewport-space') !== value)
+          palette.style.setProperty('--palette-viewport-space', value);
+        for (const [name, active] of [['has-compact-viewport', height <= 480 || available < 240], ['has-short-viewport', available < 148]])
+          if (palette.classList.contains(name) !== active) palette.classList.toggle(name, active);
+      }
+    };
+    const schedule = () => { if (!queued) { queued = true; requestAnimationFrame(update); } };
+    window.addEventListener('resize', schedule, { passive: true });
+    window.visualViewport?.addEventListener('resize', schedule, { passive: true });
+    window.visualViewport?.addEventListener('scroll', schedule, { passive: true });
+    document.addEventListener('scroll', event => {
+      if (event.target instanceof Element && palettes.some(palette => event.target.contains(palette))) schedule();
+    }, { capture: true, passive: true });
+    document.addEventListener('animationend', event => {
+      if (event.target instanceof Element && palettes.some(palette => event.target.contains(palette))) schedule();
+    });
+    if (typeof ResizeObserver !== 'undefined') {
+      const observer = new ResizeObserver(schedule);
+      palettes.forEach(palette => observer.observe(palette.parentElement));
+    }
+    schedule();
+  }
+
   function initEventListeners() {
     initChordPalette($('inline-chord-palette'), dom.songContent, insertPlainTextIntoContentEditable);
     initChordPalette($('legacy-chord-palette'), dom.inlineSongContent, text => insertCharAtCursor(dom.inlineSongContent, text));
     initChordPalette($('song-chord-palette'), dom.songContentInput, text => insertCharAtCursor(dom.songContentInput, text));
+    initChordPaletteViewport();
     // Home FAB button
     $('btn-home').addEventListener('click', goHome);
     dom.songContentSection.addEventListener('scroll', updateSheetScrollTopButton, { passive: true });

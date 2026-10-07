@@ -1,0 +1,131 @@
+{
+  "scope": "Local Android resource and native application compilation; generated MAUI Android safe zones; PDF rendering and metadata. No physical-device/store or production-upgrade approval.",
+  "android": {
+    "passed": true,
+    "compiler": "AAPT2 from Microsoft.Android.Sdk.Windows 36.1.69",
+    "compiledResources": 19
+  },
+  "pdf": {
+    "passed": true,
+    "renderer": "Poppler and PDFium",
+    "pages": 6,
+    "files": [
+      {
+        "file": "assets/symbol-aubergine.pdf",
+        "bounds": [
+          84,
+          110,
+          515,
+          489
+        ],
+        "metadata": "ChordKeep \u2014 Royal Folio"
+      },
+      {
+        "file": "assets/symbol-black.pdf",
+        "bounds": [
+          84,
+          110,
+          515,
+          489
+        ],
+        "metadata": "ChordKeep \u2014 Royal Folio"
+      },
+      {
+        "file": "assets/symbol-crimson.pdf",
+        "bounds": [
+          84,
+          110,
+          515,
+          489
+        ],
+        "metadata": "ChordKeep \u2014 Royal Folio"
+      },
+      {
+        "file": "assets/symbol-ivory.pdf",
+        "bounds": [
+          84,
+          110,
+          515,
+          489
+        ],
+        "metadata": "ChordKeep \u2014 Royal Folio"
+      },
+      {
+        "file": "assets/symbol-obsidian.pdf",
+        "bounds": [
+          84,
+          110,
+          515,
+          489
+        ],
+        "metadata": "ChordKeep \u2014 Royal Folio"
+      },
+      {
+        "file": "assets/symbol-white.pdf",
+        "bounds": [
+          84,
+          110,
+          515,
+          489
+        ],
+        "metadata": "ChordKeep \u2014 Royal Folio"
+      }
+    ]
+  },
+  "mauiAndroidForeground": {
+    "passed": true,
+    "densities": [
+      {
+        "density": "mipmap-hdpi",
+        "size": [
+          162,
+          162
+        ],
+        "maximumRadiusDp": 32.0867,
+        "safeRadiusDp": 33
+      },
+      {
+        "density": "mipmap-mdpi",
+        "size": [
+          108,
+          108
+        ],
+        "maximumRadiusDp": 32.9014,
+        "safeRadiusDp": 33
+      },
+      {
+        "density": "mipmap-xhdpi",
+        "size": [
+          216,
+          216
+        ],
+        "maximumRadiusDp": 32.2587,
+        "safeRadiusDp": 33
+      },
+      {
+        "density": "mipmap-xxhdpi",
+        "size": [
+          324,
+          324
+        ],
+        "maximumRadiusDp": 32.046,
+        "safeRadiusDp": 33
+      },
+      {
+        "density": "mipmap-xxxhdpi",
+        "size": [
+          432,
+          432
+        ],
+        "maximumRadiusDp": 32.0844,
+        "safeRadiusDp": 33
+      }
+    ]
+  },
+  "applicationBuilds": {
+    "date": "2026-10-07",
+    "configuration": "Debug",
+    "android": "passed; zero warnings/errors",
+    "windows": "passed; zero warnings/errors"
+  }
+}

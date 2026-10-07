@@ -1,0 +1,13 @@
+{
+  "name": "Royal Folio",
+  "version": "1.2",
+  "width": 480,
+  "height": 422,
+  "paths": [
+    "M138 28 L180 46 L240 0 L300 46 L342 28 V76 L240 109 L138 76 Z",
+    "M0 82 Q0 65 17 69 L219 125 Q232 129 232 141 V164 L122 136 V267 C100 250 76 265 58 286 C38 309 54 337 83 334 C111 344 144 322 144 296 V176 L232 200 V422 C144 382 72 371 7 379 Q0 381 0 374 Z",
+    "M248 141 Q248 129 261 125 L463 69 Q480 65 480 82 V374 Q480 381 473 379 C408 371 336 382 248 422 V200 L364 168 V267 C342 250 318 265 300 286 C280 309 296 337 325 334 C353 344 384 322 384 296 V128 L248 164 Z"
+  ],
+  "note": "Clean vector redraw of the owner-selected refined Royal Folio: detached three-point crown, open folio, two musical noteheads joined visually through the page beam. Three intentionally separate filled contours; no decorative score lines.",
+  "reference": "references/approved-royal-folio.png"
+}

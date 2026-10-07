@@ -1,5 +1,5 @@
 param(
-    [string] $Repository = 'Ruach-Systems/ruach-chord-library',
+    [string] $Repository = 'Ruach-Systems/ruach-chord-keep',
     [string] $KeyTool = 'keytool',
     [switch] $UploadSecrets
 )

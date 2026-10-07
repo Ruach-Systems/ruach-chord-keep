@@ -1,0 +1,5 @@
+/* The approved proposal is implemented in the shared css/brand.css. */
+.review-account{position:fixed;inset:0;z-index:20001;padding:16px;background:#0009;display:grid;place-items:center}
+.review-account[hidden]{display:none}
+.review-account section{max-height:90dvh;overflow:auto}
+.review-account .review-preview-status{margin:12px 0 0;font-size:14px}

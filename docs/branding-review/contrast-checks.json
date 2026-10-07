@@ -1,0 +1,51 @@
+[
+  {
+    "label": "Light primary label",
+    "foreground": "#FFFFFF",
+    "background": "#B21F32",
+    "ratio": 6.698462146895594,
+    "normalTextAA": true
+  },
+  {
+    "label": "Light chord on sheet",
+    "foreground": "#B21F32",
+    "background": "#FFFFFF",
+    "ratio": 6.698462146895594,
+    "normalTextAA": true
+  },
+  {
+    "label": "Light muted on ivory",
+    "foreground": "#696270",
+    "background": "#F7F3ED",
+    "ratio": 5.304179589930052,
+    "normalTextAA": true
+  },
+  {
+    "label": "Dark primary label",
+    "foreground": "#141821",
+    "background": "#EF5967",
+    "ratio": 5.324059431418246,
+    "normalTextAA": true
+  },
+  {
+    "label": "Dark chord on Obsidian sheet",
+    "foreground": "#EF5967",
+    "background": "#141821",
+    "ratio": 5.324059431418246,
+    "normalTextAA": true
+  },
+  {
+    "label": "Dark muted on surface",
+    "foreground": "#D6CDD2",
+    "background": "#292530",
+    "ratio": 9.647885654055466,
+    "normalTextAA": true
+  },
+  {
+    "label": "Success white label",
+    "foreground": "#FFFFFF",
+    "background": "#2E6B57",
+    "ratio": 6.255826794287199,
+    "normalTextAA": true
+  }
+]

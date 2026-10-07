@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ChordKeep design preview</title>
+<link rel="stylesheet" href="../../src/ChordLibrary.Shared/wwwroot/css/style.css">
+<link rel="stylesheet" href="../../src/ChordLibrary.Shared/wwwroot/css/native.css">
+<link rel="stylesheet" href="../../src/ChordLibrary.Shared/wwwroot/css/brand.css">
+<link rel="stylesheet" href="proposal.css">
+<script>document.querySelectorAll('link[rel="stylesheet"]').forEach(link => link.href += '?review=' + Date.now());</script>
+<script>if(new URLSearchParams(location.search).has('testing'))document.documentElement.dataset.testing='true';</script>
+<style>html[data-testing="true"] *{animation:none!important;transition:none!important}</style>
+</head><body><div id="app"></div>
+<script>
+const reviewScriptVersion=Date.now();
+for(const file of ['../../src/ChordLibrary.Shared/wwwroot/js/native-bridge.js','../../src/ChordLibrary.Shared/wwwroot/js/view-updates.js','preview.js'])
+  document.write('<script src="'+file+'?review='+reviewScriptVersion+'"><\/script>');
+</script>
+</body></html>

@@ -29,5 +29,5 @@ try {
     if (!$signer) { throw 'apksigner was not found.' }
     & $signer.FullName verify --verbose --print-certs $apks[0].FullName
     Assert-NativeSuccess 'APK signature verification'
-    Copy-Item -LiteralPath $apks[0].FullName -Destination "$output/ChordLibrary-$Version-android.apk"
+    Copy-Item -LiteralPath $apks[0].FullName -Destination "$output/ChordKeep-$Version-android.apk"
 } finally { Pop-Location }

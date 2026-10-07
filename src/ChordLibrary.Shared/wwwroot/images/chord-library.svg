@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <title>Chord Library — Chord Flow</title>
+  <path fill="#B21F32" d="M0 0H1024V1024H0Z"/>
+  <path fill="#FFFFFF" d="M360 405C490 408 536 304 700 322V632H650V425C530 409 479 505 410 496V676H360Z"/>
+  <ellipse fill="#FFFFFF" cx="345" cy="676" rx="70" ry="45" transform="rotate(-20 345 676)"/>
+  <ellipse fill="#FFFFFF" cx="635" cy="632" rx="70" ry="45" transform="rotate(-20 635 632)"/>
+</svg>

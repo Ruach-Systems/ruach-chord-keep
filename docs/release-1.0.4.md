@@ -22,4 +22,4 @@ Download `ChordLibrary-1.0.4-android.apk` from the draft assets and install it o
 
 The repository is private. Sign into an account with draft-release access on your phone to download the APK. This remains an unpublished draft for phone validation; no passing hosted CI or physical-device result is claimed.
 
-[GitHub release downloads](https://github.com/Ruach-Systems/ruach-chord-library/releases)
+[GitHub release downloads](https://github.com/Ruach-Systems/ruach-chord-keep/releases)

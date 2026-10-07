@@ -46,7 +46,7 @@ try {
     }
     & "$compilerDir/ISCC.exe" "/DAppVersion=$Version" "/DPublishDir=$output/publish" "/DOutputDir=$output" "/DWebViewBootstrapper=$webView" packaging/windows/ChordLibrary.iss
     Assert-NativeSuccess 'Windows installer compilation'
-    $installer = "$output/ChordLibrary-$Version-windows-x64-setup.exe"
+    $installer = "$output/ChordKeep-$Version-windows-x64-setup.exe"
     if ($hasCertificate) {
         $signed = Set-AuthenticodeSignature -LiteralPath $installer -Certificate $certificate -HashAlgorithm SHA256 -TimestampServer 'http://timestamp.digicert.com'
         if ($signed.Status -ne 'Valid') { throw "Installer signing failed: $($signed.Status)" }

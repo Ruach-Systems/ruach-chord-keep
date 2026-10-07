@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=ChordKeep
+Comment=Songs, chords and setlists
+Exec=/path/to/chordkeep
+Icon=chordkeep
+Terminal=false
+Categories=AudioVideo;Music;
