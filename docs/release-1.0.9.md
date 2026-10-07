@@ -20,7 +20,11 @@ The Windows installer remains unsigned by the owner's instruction. Android uses 
 
 ## Validation and distribution
 
-The manual release workflow runs the automated tests, builds both platforms, verifies Windows installation/uninstall and Android signing, and creates checksums and an unpublished draft. Its successful completion must be verified before using the packages.
+The [Release packages run](https://github.com/Ruach-Systems/ruach-chord-keep/actions/runs/37585653674) succeeded and created an unpublished draft from tag `v1.0.9`, source commit `5a451d63d4cb91eb1c96af89935ec0fa8d94bfea`. Windows silent installation, installed-file checks and uninstall passed; Android signature verification passed.
+
+The [hosted Verify run](https://github.com/Ruach-Systems/ruach-chord-keep/actions/runs/37585634022) passed 159 .NET tests and 30 JavaScript tests. Both native builds completed with zero warnings and errors. Fresh local validation also passed the same suites and both Debug builds.
+
+All five uploaded download assets were retrieved and checked. Every recorded SHA-256 matched, source/version/build metadata matched, and the Windows setup had the expected unsigned status. The downloaded APK retains application ID `com.louiejeg.chordlibrary`, version `1.0.9`, build number `10` and label `ChordKeep`; its verified signing certificate matches release 1.0.8.
 
 Local browser validation for the mobile palette passed 13 checks at 320px, 414px and reduced-height 414×360, including simulated overlay keyboards in both editors. The desktop palette suite and 24 phone sync/navigation checks passed. Physical Android keyboard, launcher appearance and signed-installation upgrade validation remain separate from browser/build checks.
 
