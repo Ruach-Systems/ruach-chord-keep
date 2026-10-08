@@ -795,6 +795,7 @@
       dom.setlistDetail.classList.add('hidden');
       dom.appTitle.textContent = 'ChordKeep';
       stopAutoScroll();
+      $('btn-home').classList.add('hidden');
       setSongActionsVisible(false);
       renderHomeDashboard();
       return;
@@ -803,6 +804,10 @@
     dom.emptyState.classList.add('hidden');
     dom.songDetail.classList.remove('hidden');
     dom.setlistDetail.classList.add('hidden');
+    // Every entry into the reader (including a newly saved/imported song)
+    // needs the same navigation and actions as selecting a library item.
+    $('btn-home').classList.remove('hidden');
+    setSongActionsVisible(true);
 
     // Move song title into header bar for compact view
     const transposedTitle = transposeSteps !== 0
@@ -1149,8 +1154,6 @@
     dom.songContentSection.scrollTop = 0;
     updateSheetScrollTopButton();
     closeSidebar();
-    $('btn-home').classList.remove('hidden');
-    setSongActionsVisible(true);
 
     // Announce to screen readers
     if (song) announce(`Viewing ${song.title}`);

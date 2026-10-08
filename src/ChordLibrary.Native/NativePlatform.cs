@@ -15,6 +15,7 @@ public sealed class NativePlatform : IAppPlatform
 {
     public string DataDirectory => Path.Combine(FileSystem.AppDataDirectory, "library");
     public bool IsNative => true;
+    public string AppVersion => AppInfo.Current.VersionString;
 #if WINDOWS
     public string OAuthRedirectUri => "http://127.0.0.1:54179/callback/";
 #else

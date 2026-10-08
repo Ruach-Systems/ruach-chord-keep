@@ -259,6 +259,12 @@
     configure(options) {
       nativePlatform = options?.native === true;
       qrImportSupported = nativePlatform && options?.qrImport === true;
+      const versionLabel = document.getElementById('app-version');
+      const version = typeof options?.appVersion === 'string' ? options.appVersion.trim() : '';
+      if (versionLabel) {
+        versionLabel.textContent = version ? 'Version ' + version : '';
+        versionLabel.classList.toggle('hidden', !version);
+      }
       document.getElementById('btn-scan-qr')?.classList.toggle('hidden', !qrImportSupported);
     },
     get isNative() { return nativePlatform; },

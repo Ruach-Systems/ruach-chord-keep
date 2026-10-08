@@ -1668,23 +1668,13 @@
     },
     {
       "path": "README.md",
-      "bytes": 11070,
-      "sha256": "41f14c630c0bb7310e514e7580f3211420427ddfdad7d9fdc09f52575aabd957"
-    },
-    {
-      "path": "references/approved-refinement-board.png",
-      "bytes": 1338627,
-      "sha256": "59a071f4f8af777718bc7da033a3066c38a8a1e53e79688e30b9dd6f59485f28"
+      "bytes": 11173,
+      "sha256": "70870d773b1b56a2f200beda0ff1e6230a4eb6689a5b364bb9c3aa16ffd700bc"
     },
     {
       "path": "references/approved-royal-folio.png",
       "bytes": 1194348,
       "sha256": "7a63e5a5510d94d8719a9340b407fc51cd8f79d66d204d90a28f6aefd8b0f4f8"
-    },
-    {
-      "path": "references/approved-symbol-concept.png",
-      "bytes": 591032,
-      "sha256": "7c96056ddc7a2d0f3edbce3751875f983cea6dfa2e83615c975effac61c9ce45"
     },
     {
       "path": "source/build_assets.py",

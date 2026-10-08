@@ -4,6 +4,7 @@ public interface IAppPlatform
 {
     string DataDirectory { get; }
     bool IsNative { get; }
+    string AppVersion => string.Empty;
     bool SupportsQrImport => false;
     string OAuthRedirectUri { get; }
     Task<string?> PickJsonAsync();

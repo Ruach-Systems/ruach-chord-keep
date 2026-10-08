@@ -81,7 +81,7 @@
         try
         {
             reference = DotNetObjectReference.Create(this);
-            await JS.InvokeVoidAsync("NativeBridge.configure", new { native = Platform.IsNative, qrImport = Platform.SupportsQrImport });
+            await JS.InvokeVoidAsync("NativeBridge.configure", new { native = Platform.IsNative, qrImport = Platform.SupportsQrImport, appVersion = Platform.AppVersion });
             await JS.InvokeVoidAsync("NativeBridge.initialize", reference);
             await JS.InvokeVoidAsync("libraryLoader.load");
             ready = true;

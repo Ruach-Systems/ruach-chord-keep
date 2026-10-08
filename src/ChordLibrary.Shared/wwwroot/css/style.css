@@ -3906,6 +3906,14 @@ body:has(.sidebar.open) .fab {
   border-radius: 8px;
 }
 
+.user-dropdown-version {
+  margin: var(--spacing-sm) 0 0;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  line-height: 1.5;
+  text-align: center;
+}
+
 #btn-import-data {
   margin-top: var(--spacing-sm);
 }

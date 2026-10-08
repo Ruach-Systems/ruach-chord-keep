@@ -78,8 +78,14 @@ html :is(.modal-content,.native-dialog,.inline-editor-actions) .btn-secondary:fo
 .modal-panel-icon,.qr-scanner-header-icon,.update-banner,.update-banner .btn-dismiss {color:var(--on-accent);}
 .sync-indicator-mini.error {background:var(--danger);}
 .transpose-value.positive {background:color-mix(in srgb,var(--success) 16%,transparent);}
-.transpose-value.negative,.inline-editor-warning,.toast.error {background:color-mix(in srgb,var(--danger) 15%,var(--bg-secondary));}
-.toast.success {background:color-mix(in srgb,var(--success) 15%,var(--bg-secondary));}
+.transpose-value.negative,.inline-editor-warning {background:color-mix(in srgb,var(--danger) 15%,var(--bg-secondary));}
+/* Opaque theme surfaces keep notifications readable over any screen content.
+   Status color belongs on the border; message text uses the theme's foreground. */
+html .toast {color:var(--text-primary);}
+html .toast:is(.toast-success,.success) {background:color-mix(in srgb,var(--success) 15%,var(--bg-secondary));border-color:var(--success);}
+html .toast:is(.toast-error,.error) {background:color-mix(in srgb,var(--danger) 15%,var(--bg-secondary));border-color:var(--danger);}
+html .toast:is(.toast-info,.info) {background:color-mix(in srgb,var(--accent) 15%,var(--bg-secondary));border-color:var(--accent);}
+html .btn-undo {color:var(--on-accent);}
 .song-content ::selection,.inline-song-content::selection,.song-compose-surface textarea::selection {background:color-mix(in srgb,var(--accent) 32%,transparent);}
 @media(max-width:767px) {
   :root {--header-height:60px;}

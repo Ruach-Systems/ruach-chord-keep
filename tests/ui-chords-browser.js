@@ -53,6 +53,22 @@
     });
     NativeBridge.replaceSnapshot({ 'chord-library-songs': JSON.stringify([{id:'test',title:'Morning Light',artist:'Studio Collective',content:'C| verse',createdAt:1,updatedAt:1}]),
       'chord-library-setlists':'[]','chord-library-theme':'dark' }, true); await settled();
+    await check('adding from home opens the reader with working More and Home controls', async () => {
+      assert($('btn-home').classList.contains('hidden') && $('btn-song-actions').classList.contains('hidden'), 'Reader controls leaked onto home');
+      $('btn-add-song').click(); await settled();
+      $('song-title-input').value = 'New reader controls'; $('song-content-input').value = 'C| G|';
+      $('song-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); await settled();
+      assert(!$('song-detail').classList.contains('hidden'), 'New song did not open');
+      for (const id of ['btn-home', 'btn-song-actions']) {
+        const button = $(id), bounds = button.getBoundingClientRect();
+        assert(!button.classList.contains('hidden') && bounds.width > 0 && bounds.height > 0, id + ' missing after creation');
+      }
+      $('btn-song-actions').click(); await settled();
+      assert(!$('song-actions-menu').classList.contains('hidden'), 'More menu did not open');
+      $('btn-song-actions').click(); $('btn-home').click(); await settled();
+      assert(!$('empty-state').classList.contains('hidden') && $('song-detail').classList.contains('hidden'), 'Home did not return to the library');
+      assert($('btn-home').classList.contains('hidden') && $('btn-song-actions').classList.contains('hidden'), 'Reader controls remained on home');
+    });
     $('home-songs-list').querySelector('[data-id="test"]').click(); $('btn-inline-edit').click(); await settled();
     await check('palette only appears while editing and provides every root/form', async () => {
       assert(!$('inline-chord-palette').classList.contains('hidden'), 'Inline palette missing');
