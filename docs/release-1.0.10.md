@@ -25,4 +25,4 @@ Phone-width and desktop browser suites passed all 14 checks, including creating 
 
 All five uploaded assets were downloaded and checked against the SHA-256 manifest. Source/version/build metadata matched; Windows setup was unsigned as requested. The APK retains application ID `com.louiejeg.chordlibrary`, version `1.0.10`, build number `11`, label `ChordKeep` and the existing release signing certificate.
 
-[Download the 1.0.10 draft](https://github.com/Ruach-Systems/ruach-chord-keep/releases/tag/untagged-82f60d5de45c7ce57d4b). Repository access is required. Physical Android verification remains separate from browser and build checks. This release remains an unpublished draft; publication and future releases require separate instructions.
+[GitHub releases and downloads](https://github.com/Ruach-Systems/ruach-chord-keep/releases). Repository access is required. Physical Android verification remains separate from browser and build checks. This release remains an unpublished draft; publication and future releases require separate instructions.
