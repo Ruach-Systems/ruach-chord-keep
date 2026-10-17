@@ -6,26 +6,39 @@ namespace ChordLibrary.Tests;
 public sealed partial class LocalLibraryStoreTests
 {
     [Theory]
-    [InlineData(false, false, -1)]
-    [InlineData(false, false, 0)]
-    [InlineData(false, false, 1)]
-    [InlineData(false, true, -1)]
-    [InlineData(false, true, 0)]
-    [InlineData(false, true, 1)]
-    [InlineData(true, false, -1)]
-    [InlineData(true, false, 0)]
-    [InlineData(true, false, 1)]
-    [InlineData(true, true, -1)]
-    [InlineData(true, true, 0)]
-    [InlineData(true, true, 1)]
-    public async Task LatestTimestampWinsForEditsAndDeletions(bool localDeleted, bool remoteDeleted, int remoteOffset)
+    [InlineData(false, false, -1, false)]
+    [InlineData(false, false, -1, true)]
+    [InlineData(false, false, 0, false)]
+    [InlineData(false, false, 0, true)]
+    [InlineData(false, false, 1, false)]
+    [InlineData(false, false, 1, true)]
+    [InlineData(false, true, -1, false)]
+    [InlineData(false, true, -1, true)]
+    [InlineData(false, true, 0, false)]
+    [InlineData(false, true, 0, true)]
+    [InlineData(false, true, 1, false)]
+    [InlineData(false, true, 1, true)]
+    [InlineData(true, false, -1, false)]
+    [InlineData(true, false, -1, true)]
+    [InlineData(true, false, 0, false)]
+    [InlineData(true, false, 0, true)]
+    [InlineData(true, false, 1, false)]
+    [InlineData(true, false, 1, true)]
+    [InlineData(true, true, -1, false)]
+    [InlineData(true, true, -1, true)]
+    [InlineData(true, true, 0, false)]
+    [InlineData(true, true, 0, true)]
+    [InlineData(true, true, 1, false)]
+    [InlineData(true, true, 1, true)]
+    public async Task LatestTimestampWinsForEditsAndDeletions(bool localDeleted, bool remoteDeleted, int remoteOffset, bool batch)
     {
         const string profile = "user:alice";
         await Store.AcceptRemoteAsync(profile, "songs", "a", Song("a", "Original", 1), false, 1);
         await Store.SaveDocumentAsync(profile, new() { Songs = localDeleted ? [] : [Song("a", "Local", 20)] });
         var local = Assert.Single((await Store.ReadSyncStateAsync(profile)).PendingChanges);
         var cloudTime = LibraryValidation.Modified(local.Payload) + remoteOffset;
-        await Store.MergeSyncRemoteAsync(profile, "songs", "a", Song("a", "Cloud", cloudTime), remoteDeleted, 2, checkpoint: true);
+        if (batch) await Store.MergeSyncBatchAsync(profile, [new("songs", "a", Song("a", "Cloud", cloudTime), remoteDeleted, 2, DateTimeOffset.UtcNow)]);
+        else await Store.MergeSyncRemoteAsync(profile, "songs", "a", Song("a", "Cloud", cloudTime), remoteDeleted, 2, checkpoint: true);
         var reopened = new LocalLibraryStore(_directory);
         var state = await reopened.ReadSyncStateAsync(profile);
         Assert.Equal(2, state.DownloadCursors["songs"]);

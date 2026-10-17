@@ -105,7 +105,7 @@ public sealed class LibraryImportService
         var setlistsResult = Merge(merged.Setlists, incoming.Setlists);
         var knownSongs = merged.Songs.Select(LibraryValidation.Id).ToHashSet(StringComparer.Ordinal);
         var missing = merged.Setlists.Sum(s => ((JsonArray)s["songIds"]!).Count(id => !knownSongs.Contains(id!.GetValue<string>())));
-        if (missing > 0) warnings.Add($"{missing} setlist song reference(s) have no matching song. References were preserved. Affected setlists remain pending for cloud sync while those songs are absent from Supabase, and can pause the remaining sync. Import or sync the missing songs, or remove the unresolved references.");
+        if (missing > 0) warnings.Add($"{missing} setlist song reference(s) have no matching song. References were preserved. Affected setlists remain pending for cloud sync until those songs exist in Supabase. Other valid records continue syncing. Import or sync the missing songs, or remove the unresolved references.");
         LibraryValidation.Validate(merged);
         return new ImportPreview(merged, songsResult.Added, songsResult.Updated, setlistsResult.Added, setlistsResult.Updated, warnings, isSingle);
     }

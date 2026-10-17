@@ -131,43 +131,76 @@ public sealed partial class LocalLibraryStore
         JsonObject payload, bool deleted, long revision, bool checkpoint = false, CancellationToken ct = default) =>
         WithStateAsync(profileId, true, state =>
         {
-            if (revision <= 0) throw new LibraryValidationException("Remote revisions must be positive.");
-            var item = ValidateRemote(collection, id, payload, deleted);
-            var key = Key(collection, id);
-            if (state.RemoteRevisions.GetValueOrDefault(key) <= revision)
-            {
-                // A client with an older clock or older app can publish an earlier edit with a
-                // higher server revision. Retain our newer saved version, including deletions.
-                if (!state.PendingChanges.ContainsKey(key))
-                {
-                    var current = Records(LibraryDocument.FromSnapshot(state.Snapshot), collection)
-                        .FirstOrDefault(record => LibraryValidation.Id(record) == id);
-                    if (current is null && state.RemoteDeleted.Contains(key) && state.RemoteModified.TryGetValue(key, out var deletedAt))
-                        current = new JsonObject { ["id"] = id, ["updatedAt"] = deletedAt, ["deleted"] = true };
-                    if (current is not null && LibraryValidation.Modified(current) > LibraryValidation.Modified(item))
-                        QueueChange(state, collection, id, current, LibraryValidation.IsDeleted(current));
-                }
-                if (state.PendingChanges.TryGetValue(key, out var pending)
-                    && LibraryValidation.Modified(pending.Payload) > LibraryValidation.Modified(item))
-                {
-                    pending.ExpectedRevision = revision;
-                    state.RemoteRevisions[key] = revision;
-                    state.RemoteModified[key] = LibraryValidation.Modified(item);
-                    if (pending.Deleted) state.RemoteDeleted.Add(key); else state.RemoteDeleted.Remove(key);
-                    if (collection == "songs" && pending.Deleted) RemoveDeletedSongReferences(state, id);
-                }
-                else
-                {
-                    // Compare against the current pending version under the profile lock, including
-                    // edits made while the network request was running.
-                    var hadPending = state.PendingChanges.Remove(key);
-                    ApplyRemote(state, collection, id, item, deleted, revision, force: hadPending);
-                }
-            }
-            if (checkpoint)
-                state.DownloadCursors[collection] = Math.Max(state.DownloadCursors.GetValueOrDefault(collection), revision);
-            return state.PendingChanges.TryGetValue(key, out var remaining) ? CloneChange(remaining) : null;
+            var document = LibraryDocument.FromSnapshot(state.Snapshot);
+            var result = MergeSyncRemote(state, document, collection, id, payload, deleted, revision, checkpoint);
+            document.WriteTo(state.Snapshot);
+            return result;
         }, ct);
+
+    /// <summary>Commits a bounded download page and its checkpoint together. Invalid pages roll back in full.</summary>
+    public Task MergeSyncBatchAsync(string profileId, IReadOnlyList<Supabase.RemoteDocument> records, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(records);
+        if (records.Count == 0) return Task.CompletedTask;
+        if (records.Count > 500) throw new ArgumentException("A sync batch may contain at most 500 records.");
+        return WithStateAsync(profileId, true, state =>
+        {
+            var document = LibraryDocument.FromSnapshot(state.Snapshot);
+            long previous = 0;
+            var collection = records[0].Collection;
+            foreach (var record in records)
+            {
+                ct.ThrowIfCancellationRequested();
+                if (record.Collection != collection || record.Revision <= previous)
+                    throw new LibraryValidationException("Sync batches must contain one collection in increasing revision order.");
+                MergeSyncRemote(state, document, collection, record.Id, record.Payload, record.Deleted, record.Revision, true);
+                previous = record.Revision;
+            }
+            document.WriteTo(state.Snapshot);
+            return true;
+        }, ct);
+    }
+
+    private static PendingLibraryChange? MergeSyncRemote(PersistedState state, LibraryDocument document,
+        string collection, string id, JsonObject payload, bool deleted, long revision, bool checkpoint)
+    {
+        if (revision <= 0) throw new LibraryValidationException("Remote revisions must be positive.");
+        var item = ValidateRemote(collection, id, payload, deleted);
+        var key = Key(collection, id);
+        if (state.RemoteRevisions.GetValueOrDefault(key) <= revision)
+        {
+            // A client with an older clock or older app can publish an earlier edit with a
+            // higher server revision. Retain our newer saved version, including deletions.
+            if (!state.PendingChanges.ContainsKey(key))
+            {
+                var current = Records(document, collection)
+                    .FirstOrDefault(record => LibraryValidation.Id(record) == id);
+                if (current is null && state.RemoteDeleted.Contains(key) && state.RemoteModified.TryGetValue(key, out var deletedAt))
+                    current = new JsonObject { ["id"] = id, ["updatedAt"] = deletedAt, ["deleted"] = true };
+                if (current is not null && LibraryValidation.Modified(current) > LibraryValidation.Modified(item))
+                    QueueChange(state, collection, id, current, LibraryValidation.IsDeleted(current));
+            }
+            if (state.PendingChanges.TryGetValue(key, out var pending)
+                && LibraryValidation.Modified(pending.Payload) > LibraryValidation.Modified(item))
+            {
+                pending.ExpectedRevision = revision;
+                state.RemoteRevisions[key] = revision;
+                state.RemoteModified[key] = LibraryValidation.Modified(item);
+                if (pending.Deleted) state.RemoteDeleted.Add(key); else state.RemoteDeleted.Remove(key);
+                if (collection == "songs" && pending.Deleted) RemoveDeletedSongReferences(state, id, document);
+            }
+            else
+            {
+                // Compare against the current pending version under the profile lock, including
+                // edits made while the network request was running.
+                var hadPending = state.PendingChanges.Remove(key);
+                ApplyRemote(state, collection, id, item, deleted, revision, force: hadPending, sharedDocument: document);
+            }
+        }
+        if (checkpoint)
+            state.DownloadCursors[collection] = Math.Max(state.DownloadCursors.GetValueOrDefault(collection), revision);
+        return state.PendingChanges.TryGetValue(key, out var remaining) ? CloneChange(remaining) : null;
+    }
 
     /// <summary>Accepts a reviewed cloud conflict only while the local version is still the version shown to the user.</summary>
     public Task<bool> AcceptConflictRemoteAsync(string profileId, string collection, string id, string localVersion,
@@ -183,7 +216,7 @@ public sealed partial class LocalLibraryStore
     }, ct);
 
     private static bool ApplyRemote(PersistedState state, string collection, string id, JsonObject payload,
-        bool deleted, long revision, bool force = false)
+        bool deleted, long revision, bool force = false, LibraryDocument? sharedDocument = null)
     {
         if (revision <= 0) throw new LibraryValidationException("Remote revisions must be positive.");
         var item = ValidateRemote(collection, id, payload, deleted);
@@ -191,26 +224,50 @@ public sealed partial class LocalLibraryStore
         if (state.PendingChanges.ContainsKey(key)) return false;
         if (!force && state.RemoteRevisions.GetValueOrDefault(key) >= revision) return true;
 
-        var document = LibraryDocument.FromSnapshot(state.Snapshot);
+        var document = sharedDocument ?? LibraryDocument.FromSnapshot(state.Snapshot);
         var records = Records(document, collection);
         records.RemoveAll(x => LibraryValidation.Id(x) == id);
         if (!deleted) records.Add(item);
         state.RemoteRevisions[key] = revision;
         state.RemoteModified[key] = LibraryValidation.Modified(item);
         if (deleted) state.RemoteDeleted.Add(key); else state.RemoteDeleted.Remove(key);
-        document.WriteTo(state.Snapshot);
-        if (collection == "songs" && deleted) RemoveDeletedSongReferences(state, id);
+
+        if (collection == "songs" && deleted) RemoveDeletedSongReferences(state, id, document);
         if (collection == "setlists" && !deleted)
         {
             foreach (var songKey in state.RemoteDeleted.Where(x => x.StartsWith("songs:", StringComparison.Ordinal)).ToArray())
-                RemoveDeletedSongReferences(state, songKey[6..]);
+                RemoveDeletedSongReferences(state, songKey[6..], document);
         }
+        if (sharedDocument is null) document.WriteTo(state.Snapshot);
         return true;
     }
 
     /// <summary>An upload only clears the exact local version sent; later edits retain their pending state.</summary>
     public Task AcknowledgeAsync(string profileId, string collection, string id, string localVersion,
-        long remoteRevision, CancellationToken ct = default, long? modifiedAt = null) => WithStateAsync(profileId, true, state =>
+        long remoteRevision, CancellationToken ct = default, long? modifiedAt = null) =>
+        AcknowledgeBatchAsync(profileId, [new(collection, id, localVersion, remoteRevision, modifiedAt)], ct);
+
+    public sealed record SyncAcknowledgment(string Collection, string Id, string LocalVersion, long Revision, long? ModifiedAt);
+
+    public Task AcknowledgeBatchAsync(string profileId, IReadOnlyList<SyncAcknowledgment> acknowledgments, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(acknowledgments);
+        if (acknowledgments.Count == 0) return Task.CompletedTask;
+        if (acknowledgments.Count > 500) throw new ArgumentException("An acknowledgment batch may contain at most 500 records.");
+        return WithStateAsync(profileId, true, state =>
+        {
+            foreach (var acknowledgment in acknowledgments)
+            {
+                ct.ThrowIfCancellationRequested();
+                Acknowledge(state, acknowledgment.Collection, acknowledgment.Id, acknowledgment.LocalVersion,
+                    acknowledgment.Revision, acknowledgment.ModifiedAt);
+            }
+            return true;
+        }, ct);
+    }
+
+    private static void Acknowledge(PersistedState state, string collection, string id, string localVersion,
+        long remoteRevision, long? modifiedAt)
     {
         if (remoteRevision <= 0) throw new LibraryValidationException("Remote revisions must be positive.");
         var key = Key(collection, id);
@@ -226,8 +283,7 @@ public sealed partial class LocalLibraryStore
             }
             else pending.ExpectedRevision = state.RemoteRevisions[key];
         }
-        return true;
-    }, ct);
+    }
 
     /// <summary>Explicitly keeps the local item after the user has reviewed a remote conflict.</summary>
     public Task RebasePendingAsync(string profileId, string collection, string id, long remoteRevision,
@@ -306,8 +362,12 @@ public sealed partial class LocalLibraryStore
                 : baselineRevisions.TryGetValue(key, out var revision) ? revision : (long?)null;
             state.PendingChanges[key] = new PendingLibraryChange
             {
-                Collection = collection, Id = id, Payload = (JsonObject)payload.DeepClone(), Deleted = deleted,
-                ExpectedRevision = basis, LocalVersion = Guid.NewGuid().ToString("N")
+                Collection = collection,
+                Id = id,
+                Payload = (JsonObject)payload.DeepClone(),
+                Deleted = deleted,
+                ExpectedRevision = basis,
+                LocalVersion = Guid.NewGuid().ToString("N")
             };
         }
         current.Clear();
@@ -341,14 +401,18 @@ public sealed partial class LocalLibraryStore
             : state.RemoteRevisions.TryGetValue(key, out var revision) ? revision : (long?)null;
         state.PendingChanges[key] = new PendingLibraryChange
         {
-            Collection = collection, Id = id, Payload = (JsonObject)item.DeepClone(), Deleted = deleted,
-            ExpectedRevision = basis, LocalVersion = Guid.NewGuid().ToString("N")
+            Collection = collection,
+            Id = id,
+            Payload = (JsonObject)item.DeepClone(),
+            Deleted = deleted,
+            ExpectedRevision = basis,
+            LocalVersion = Guid.NewGuid().ToString("N")
         };
     }
 
-    private static void RemoveDeletedSongReferences(PersistedState state, string songId)
+    private static void RemoveDeletedSongReferences(PersistedState state, string songId, LibraryDocument? sharedDocument = null)
     {
-        var document = LibraryDocument.FromSnapshot(state.Snapshot);
+        var document = sharedDocument ?? LibraryDocument.FromSnapshot(state.Snapshot);
         var changed = false;
         foreach (var setlist in document.Setlists)
         {
@@ -359,7 +423,7 @@ public sealed partial class LocalLibraryStore
             QueueChange(state, "setlists", LibraryValidation.Id(setlist), setlist, false);
             changed = true;
         }
-        if (changed) document.WriteTo(state.Snapshot);
+        if (changed && sharedDocument is null) document.WriteTo(state.Snapshot);
     }
 
     private async Task<T> WithStateAsync<T>(string profileId, bool write, Func<PersistedState, T> operation, CancellationToken ct)
@@ -442,8 +506,12 @@ public sealed partial class LocalLibraryStore
 
     private static PendingLibraryChange CloneChange(PendingLibraryChange change) => new()
     {
-        Collection = change.Collection, Id = change.Id, Payload = (JsonObject)change.Payload.DeepClone(),
-        Deleted = change.Deleted, ExpectedRevision = change.ExpectedRevision, LocalVersion = change.LocalVersion
+        Collection = change.Collection,
+        Id = change.Id,
+        Payload = (JsonObject)change.Payload.DeepClone(),
+        Deleted = change.Deleted,
+        ExpectedRevision = change.ExpectedRevision,
+        LocalVersion = change.LocalVersion
     };
 
     private sealed class PersistedState
@@ -451,7 +519,8 @@ public sealed partial class LocalLibraryStore
         public int SchemaVersion { get; set; } = 1;
         public Dictionary<string, string> Snapshot { get; set; } = new(StringComparer.Ordinal)
         {
-            [LibraryStorageKeys.Songs] = "[]", [LibraryStorageKeys.Setlists] = "[]"
+            [LibraryStorageKeys.Songs] = "[]",
+            [LibraryStorageKeys.Setlists] = "[]"
         };
         public Dictionary<string, PendingLibraryChange> PendingChanges { get; set; } = new(StringComparer.Ordinal);
         public Dictionary<string, long> RemoteRevisions { get; set; } = new(StringComparer.Ordinal);

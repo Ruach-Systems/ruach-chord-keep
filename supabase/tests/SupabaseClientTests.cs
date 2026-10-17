@@ -528,8 +528,9 @@ public sealed partial class SupabaseClientTests
         await auth.SignInAsync("test@example.invalid", "test-password");
         var sync = new LibrarySyncCoordinator(store, new SupabaseDataClient(Options, http, auth), auth);
 
-        var error = await Assert.ThrowsAsync<SupabaseException>(() => sync.SyncAsync(profile));
-        Assert.Equal("23503", error.ErrorCode);
+        var first = await sync.SyncAsync(profile);
+        Assert.Equal("23503", Assert.Single(first.Issues).Code);
+        Assert.Equal(1, first.Remaining);
         var pending = Assert.Single((await store.ReadSyncStateAsync(profile)).PendingChanges);
         Assert.Equal("setlists", pending.Collection);
         Assert.Null(pending.ExpectedRevision);

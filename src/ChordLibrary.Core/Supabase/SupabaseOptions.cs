@@ -64,4 +64,5 @@ public sealed class SupabaseException(string message, System.Net.HttpStatusCode 
 {
     public System.Net.HttpStatusCode StatusCode { get; } = statusCode;
     public string? ErrorCode { get; } = errorCode;
+    public TimeSpan? RetryAfter { get; init; }
 }

@@ -7,9 +7,18 @@ namespace ChordLibrary.Core.Supabase;
 public sealed record RemoteDocument(string Collection, string Id, JsonObject Payload, bool Deleted, long Revision, DateTimeOffset ServerUpdatedAt);
 public sealed record ApplyResult(bool Applied, RemoteDocument Document);
 
-public sealed class SupabaseDataClient(SupabaseOptions options, HttpClient http, SupabaseAuthClient auth)
+public sealed class SupabaseDataClient(SupabaseOptions options, HttpClient http, SupabaseAuthClient auth, SyncRequestRetry? retry = null)
 {
+    private readonly SyncRequestRetry retryPolicy = retry ?? new();
+
     public async IAsyncEnumerable<RemoteDocument> PullAsync(string collection, long afterRevision = 0,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default, string? expectedOwner = null)
+    {
+        await foreach (var page in PullPagesAsync(collection, afterRevision, cancellationToken, expectedOwner).ConfigureAwait(false))
+            foreach (var document in page) yield return document;
+    }
+
+    public async IAsyncEnumerable<IReadOnlyList<RemoteDocument>> PullPagesAsync(string collection, long afterRevision = 0,
         [EnumeratorCancellation] CancellationToken cancellationToken = default, string? expectedOwner = null)
     {
         ValidateCollection(collection);
@@ -28,18 +37,21 @@ public sealed class SupabaseDataClient(SupabaseOptions options, HttpClient http,
             var path = "rest/v1/library_documents?select=collection,id,payload,deleted,revision,server_updated_at&owner_id=eq."
                 + Uri.EscapeDataString(owner) + "&collection=eq." + collection + "&revision=gt."
                 + cursor.ToString(CultureInfo.InvariantCulture) + "&order=revision.asc&limit=500";
-            var data = await SupabaseHttp.SendAsync(http, options, HttpMethod.Get, path, null, session.AccessToken, cancellationToken).ConfigureAwait(false);
+            var data = await SendWithRetryAsync(HttpMethod.Get, path, null, session, cancellationToken).ConfigureAwait(false);
             EnsureAccount(owner);
             var rows = data as JsonArray ?? throw new InvalidOperationException("Supabase returned an invalid library response.");
             if (rows.Count == 0) yield break;
+            if (rows.Count > 500) throw new InvalidOperationException("Supabase returned an oversized sync page.");
+            var page = new List<RemoteDocument>(rows.Count);
             foreach (var row in rows)
             {
                 var document = ParseDocument(row);
                 if (document.Collection != collection) throw new InvalidOperationException("Supabase returned an unexpected library collection.");
                 if (document.Revision <= cursor) throw new InvalidOperationException("Supabase returned an invalid sync revision order.");
                 cursor = document.Revision;
-                yield return document;
+                page.Add(document);
             }
+            yield return page;
             // Continue to an empty page even when the server's configured row cap is below 500.
         }
     }
@@ -54,7 +66,7 @@ public sealed class SupabaseDataClient(SupabaseOptions options, HttpClient http,
         var owner = session.User.Id;
         var path = "rest/v1/library_documents?select=collection,id,payload,deleted,revision,server_updated_at&owner_id=eq."
             + Uri.EscapeDataString(owner) + "&collection=eq." + collection + "&id=eq." + Uri.EscapeDataString(id) + "&limit=1";
-        var response = await SupabaseHttp.SendAsync(http, options, HttpMethod.Get, path, null, session.AccessToken, cancellationToken).ConfigureAwait(false);
+        var response = await SendWithRetryAsync(HttpMethod.Get, path, null, session, cancellationToken).ConfigureAwait(false);
         EnsureAccount(owner);
         var rows = response as JsonArray ?? throw new InvalidOperationException("Supabase returned an invalid library response.");
         if (rows.Count == 0) return null;
@@ -78,11 +90,14 @@ public sealed class SupabaseDataClient(SupabaseOptions options, HttpClient http,
         EnsureAccount(owner);
         var body = new JsonObject
         {
-            ["p_collection"] = collection, ["p_id"] = id, ["p_payload"] = payload.DeepClone(),
-            ["p_deleted"] = deleted, ["p_expected_revision"] = expectedRevision
+            ["p_collection"] = collection,
+            ["p_id"] = id,
+            ["p_payload"] = payload.DeepClone(),
+            ["p_deleted"] = deleted,
+            ["p_expected_revision"] = expectedRevision
         };
-        var data = await SupabaseHttp.SendAsync(http, options, HttpMethod.Post, "rest/v1/rpc/apply_library_document",
-            body, session.AccessToken, cancellationToken).ConfigureAwait(false);
+        var data = await SendWithRetryAsync(HttpMethod.Post, "rest/v1/rpc/apply_library_document",
+            body, session, cancellationToken).ConfigureAwait(false);
         EnsureAccount(owner);
         var result = data as JsonObject ?? throw new InvalidOperationException("Supabase returned an invalid save response.");
         var document = ParseDocument(result["document"]);
@@ -90,6 +105,13 @@ public sealed class SupabaseDataClient(SupabaseOptions options, HttpClient http,
             throw new InvalidOperationException("Supabase returned an unexpected library record.");
         return new ApplyResult(result["applied"]!.GetValue<bool>(), document);
     }
+
+    private Task<JsonNode?> SendWithRetryAsync(HttpMethod method, string path, JsonNode? body,
+        AuthSession session, CancellationToken cancellationToken) => retryPolicy.ExecuteAsync(() =>
+        {
+            EnsureAccount(session.User.Id);
+            return SupabaseHttp.SendAsync(http, options, method, path, body, session.AccessToken, cancellationToken);
+        }, cancellationToken);
 
     private void EnsureAccount(string owner)
     {

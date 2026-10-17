@@ -110,7 +110,8 @@
     }
     [JSInvokable] public async Task OpenAccount()
     {
-        accountOpen = true; message = "";
+        accountOpen = true;
+        if (!Session.HasAccountLibrary) message = "";
         await InvokeAsync(StateHasChanged);
     }
     private void CloseAccount() { accountOpen = false; }
@@ -180,7 +181,9 @@
         var result = await Session.SyncAsync(lifetime.Token); cloudError = result.Remaining > 0;
         refreshPending = true;
         await DeliverPendingRefresh();
-        message = result.Remaining == 0 ? "Library is up to date." : "Changes are saved on this device. Refresh to retry, or reconnect to sync.";
+        message = result.Issues.Count > 0
+            ? $"{result.Issues.Count} item(s) need attention: {string.Join(", ", result.Issues.Take(3).Select(issue => issue.DisplayName))}{(result.Issues.Count > 3 ? ", and more" : "")}. They remain saved on this device. Repair missing song references or invalid imported data, then refresh."
+            : result.Remaining == 0 ? "Library is up to date." : "Changes are saved on this device. Refresh to retry, or reconnect to sync.";
     }
     private Task UpdateAccount(string? status = null) => ready ? JS.InvokeVoidAsync("NativeBridge.setAccount", new { signedIn = Session.HasAccountLibrary, email = Session.Email, displayName = Session.DisplayName, avatarUrl = Session.AvatarUrl, status = status ?? (!SyncSignals.IsConnected ? "offline" : (cloudError || (Session.HasAccountLibrary && !Session.SignedIn)) ? "error" : Session.SignedIn ? "idle" : "offline"), message }).AsTask() : Task.CompletedTask;
     private void RequestAutomaticSync() { _ = RequestSync(); }

@@ -30,7 +30,11 @@ internal static class SupabaseHttp
             var code = data?["error_code"]?.ToString() ?? data?["code"]?.ToString();
             var message = data?["msg"]?.ToString() ?? data?["message"]?.ToString()
                 ?? data?["error_description"]?.ToString() ?? $"Supabase request failed ({(int)response.StatusCode}).";
-            throw new SupabaseException(message, response.StatusCode, code);
+            throw new SupabaseException(message, response.StatusCode, code)
+            {
+                RetryAfter = response.Headers.RetryAfter?.Delta
+                    ?? (response.Headers.RetryAfter?.Date is { } date ? date - DateTimeOffset.UtcNow : null)
+            };
         }
         return data;
     }
