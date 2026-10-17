@@ -33,6 +33,7 @@ public sealed partial class SupabaseClientTests
         var result = await new LibrarySyncCoordinator(store, new(Options, http, auth), auth).SyncAsync(profile);
         Assert.Equal(new[] { "bad", "good" }, calls);
         Assert.Equal(1, result.Uploaded); Assert.Equal(1, result.Remaining);
+        Assert.NotNull((await store.ReadLocalSyncStatusAsync(profile)).LastChecked);
         Assert.Equal("bad", Assert.Single(result.Issues).Id);
         Assert.Equal("bad", Assert.Single((await new LocalLibraryStore(directory.Path).ReadSyncStateAsync(profile)).PendingChanges).Id);
     }
@@ -58,6 +59,7 @@ public sealed partial class SupabaseClientTests
         Assert.Equal("b", Assert.Single((await store.ReadSyncStateAsync(profile)).PendingChanges).Id);
         Assert.Empty((await store.ReadSyncStateAsync(profile)).DownloadCursors);
         Assert.Equal(2, calls);
+        Assert.Null((await store.ReadLocalSyncStatusAsync(profile)).LastChecked);
     }
 
     [Fact]

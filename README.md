@@ -42,6 +42,14 @@ Supabase uses relational PostgreSQL storage: `songs` and `setlists` have typed c
 
 Firebase credentials are not part of the old export. Existing users sign into Supabase again, then import their library. The repository contains no private user songs. No real user's library has been migrated just by building this app.
 
+## Local song history and sync status
+
+Open a song's **More → Song history** menu to preview and restore previous title, artist and chord-sheet versions. Up to 30 previous versions are retained per song in the current device/profile's SQLite database. History begins with future saved changes; it cannot reconstruct earlier edits. Display-only changes do not create versions. Restoring creates a fresh pending edit, preserves current display settings, and keeps the replaced content in history. Latest-update-wins still applies when that edit syncs.
+
+History is local only: it is not synced, included in JSON exports, or a substitute for backups. Deleted songs have no history-browser entry; restoring a song deleted during review is rejected. Reimporting the same song ID makes retained versions accessible again.
+
+The account menu and **Account & sync** show pending counts, offline/syncing/attention states, and the last successful cloud check. "Up to date at last check" describes the last observation, not continuous monitoring. Startup, resume, reconnect, saved edits and manual refresh remain the only sync triggers; no interval polling is added.
+
 ## Offline and conflicts
 
 Changes are saved transactionally to an account-specific SQLite database before cloud synchronization. Songs, setlists, ordered membership, preferences and sync metadata use relational tables, and only changed rows are written. Existing JSON profiles migrate automatically on first access; their original files and backups are preserved. Pending edits/deletions survive restarts and connection failures. Sync is requested immediately after startup, returning to the app, reconnecting to the Internet, or saving/importing local changes. The header's Refresh library button also requests a sync and shows progress. There is no periodic cloud polling: while you remain in the app, use Refresh library to check for changes from another device. Requests are serialized and bursts coalesce, retaining a follow-up for edits made during a sync. Each account/project keeps separate song and setlist download checkpoints. After the initial download, only records with newer server revisions are fetched, including deletions. Existing profiles without checkpoints need one baseline download after upgrading; subsequent syncs are incremental, including after a restart. Upload acknowledgments never advance download checkpoints, so another device's intervening changes cannot be skipped.

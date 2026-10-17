@@ -7,7 +7,7 @@ namespace ChordLibrary.Core;
 
 public sealed partial class LocalLibraryStore
 {
-    private const int DatabaseVersion = 1;
+    private const int DatabaseVersion = 2;
     private enum ValueKind { Text, Integer, Boolean }
     private sealed record Field(string Name, string Column, ValueKind Kind = ValueKind.Text);
     private static readonly Field[] SongFields = [new("id", "id"), new("title", "title"), new("artist", "artist"),
@@ -52,7 +52,7 @@ public sealed partial class LocalLibraryStore
     private static async Task InitializeDatabaseAsync(SqliteConnection db, string path, CancellationToken ct)
     {
         var version = Convert.ToInt32(Scalar(db, null, "PRAGMA user_version"));
-        if (version is not (0 or DatabaseVersion))
+        if (version is not (0 or 1 or DatabaseVersion))
             throw new LibraryValidationException("This local database version is not supported. Use the app version that created it.");
         Execute(db, null, "PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;");
         if (version == 0)
@@ -65,6 +65,7 @@ public sealed partial class LocalLibraryStore
                 if (Convert.ToInt64(Scalar(db, transaction, "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")) != 0)
                     throw new LibraryValidationException("The local database has an unrecognized schema. It has been preserved.");
                 Execute(db, transaction, Schema);
+                Execute(db, transaction, HistorySchema);
                 var legacyPath = Path.ChangeExtension(path, ".json");
                 var legacyExists = File.Exists(legacyPath);
                 var legacy = await LoadLegacyAsync(legacyPath, ct).ConfigureAwait(false);
@@ -82,6 +83,15 @@ public sealed partial class LocalLibraryStore
         var hash = Scalar(db, null, "SELECT profile_hash FROM profile_metadata WHERE id=1") as string;
         if (hash != Path.GetFileNameWithoutExtension(path))
             throw new LibraryValidationException("The local database belongs to a different profile. It has been preserved.");
+        // Additive upgrade; songs, pending writes and download cursors stay intact.
+        if (version == 1)
+        {
+            using var upgrade = db.BeginTransaction();
+            Execute(db, upgrade, HistorySchema);
+            Execute(db, upgrade, $"PRAGMA user_version={DatabaseVersion}");
+            ct.ThrowIfCancellationRequested();
+            upgrade.Commit();
+        }
     }
 
     private static PersistedState ReadDatabase(SqliteConnection db, SqliteTransaction transaction, CancellationToken ct)
@@ -187,6 +197,7 @@ public sealed partial class LocalLibraryStore
     {
         var prior = LibraryDocument.FromSnapshot(before.Snapshot);
         var next = LibraryDocument.FromSnapshot(after.Snapshot);
+        CaptureSongHistory(db, transaction, prior.Songs, next.Songs, ct);
         var priorReferences = SongReferences(prior);
         foreach (var id in SongReferences(next).Except(priorReferences))
             Execute(db, transaction, "INSERT OR IGNORE INTO song_references(id) VALUES($id)", ("$id", id));

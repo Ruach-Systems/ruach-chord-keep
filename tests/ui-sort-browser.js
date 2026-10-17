@@ -35,7 +35,7 @@
     parent.postMessage(results.join('\n'), location.origin);
   };
   try {
-    $('app').innerHTML = await (await fetch('../src/ChordLibrary.Shared/Assets/library.html')).text();
+    $('app').innerHTML = await (await fetch('../src/ChordLibrary.Shared/Assets/library.html', { cache: 'no-store' })).text();
     document.querySelector('.app-product-logo').src='../src/ChordLibrary.Shared/wwwroot/images/chordkeep.svg';
     await NativeBridge.initialize({ invokeMethodAsync: async (method, data) => { if (method === 'SaveStorage') saves.push(data); } }, { 'chord-library-tour-seen': '2.4' });
     NativeBridge.configure({ native: false });

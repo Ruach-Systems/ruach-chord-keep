@@ -3092,6 +3092,15 @@
       returnToSetlist();
     });
 
+    $('btn-song-history').addEventListener('click', async () => {
+      closeSongActionsMenu();
+      if (!selectedSongId || !window.NativeBridge?.openSongHistory) return;
+      if (inlineEditingMode) { showToast('Save or cancel your chord edits before opening history.', 'info'); return; }
+      stopAutoScroll();
+      try { await window.NativeBridge.openSongHistory(selectedSongId); }
+      catch (error) { showToast(error.message || 'Could not open song history.', 'error'); }
+    });
+
     // Export song button
     $('btn-export-song').addEventListener('click', () => {
       closeSongActionsMenu();
@@ -3320,6 +3329,7 @@
 
     // Keyboard navigation
     document.addEventListener('keydown', (e) => {
+      if ($('library-root')?.inert) return;
       // Close modals on Escape (except song modal to prevent accidental loss of input)
       if (e.key === 'Escape') {
         if (dismissConfirmation()) { e.preventDefault(); return; }

@@ -9,7 +9,7 @@
 @inject AppBackNavigation BackNavigation
 @inject AppSyncSignals SyncSignals
 
-<div id="library-root" inert="@(accountOpen || preview is not null || busy)">@((MarkupString)libraryHtml)</div>
+<div id="library-root" inert="@(accountOpen || historySongId is not null || preview is not null || busy)">@((MarkupString)libraryHtml)</div>
 @if (!string.IsNullOrEmpty(startError))
 {
     <div class="native-overlay"><section class="native-dialog" role="alert"><h2>Could not open your library</h2><p>@startError</p><p>Your saved files have been kept. Close and reopen the app after resolving the storage issue.</p></section></div>
@@ -24,7 +24,7 @@
         @if (Session.SignedIn)
         {
             <p>Signed in as <strong>@Session.Email</strong></p>
-            <p>Your account library is saved on this device and synchronized across your devices.</p>
+            <div class="native-status" role="status" aria-live="polite"><strong>@syncView.Title</strong><p>@syncView.Detail</p><small>@LastCheckLabel</small></div>
             <small>Cloud changes are checked when the app opens, resumes or reconnects. Use Refresh library to check now.</small>
             <div class="native-actions"><button class="btn btn-primary" @onclick="ManualSync">Refresh library</button><button class="btn btn-danger" @onclick="SignOut">Sign out</button></div>
             <small>Sign out returns to the separate local library. Account data stays on this device for your next sign-in.</small>
@@ -54,9 +54,43 @@
         <div class="native-actions"><button class="btn btn-secondary" @onclick="CancelImport">Cancel</button><button class="btn btn-primary" @onclick="CommitImport">Import</button></div>
     </section></div>
 }
+@if (historySongId is not null)
+{
+    <div class="native-overlay"><section id="song-history-dialog" class="native-dialog native-history" role="dialog" aria-modal="true" aria-labelledby="history-title" tabindex="-1" @onkeydown="HistoryKeyDown">
+        <h2 id="history-title">Song history</h2>
+        <p>Previous saved versions on this device only. Up to 30 versions per song; history is not synced or included in exports.</p>
+        @if (!string.IsNullOrEmpty(historyError)) { <p class="native-status" role="alert">@historyError</p> }
+        @if (historyEntries.Count == 0) { <p>No previous versions yet. History begins when a saved title, artist or chord sheet changes.</p> }
+        else
+        {
+            <label for="history-version">Previous version</label>
+            <select id="history-version" value="@historySelected?.Version" @onchange="SelectHistory" disabled="@historyRestoring">
+                @foreach (var entry in historyEntries) { <option value="@entry.Version">#@entry.Version · @HistoryTime(entry) · @entry.Song["title"]</option> }
+            </select>
+            @if (historySelected is not null)
+            {
+                <h3>@historySelected.Song["title"]</h3><p>@historySelected.Song["artist"]</p>
+                <pre class="history-sheet">@historySelected.Song["content"]</pre>
+                <p>Restore replaces the current title, artist and chord sheet as a new edit. The current version is kept in history. It will sync normally when signed in.</p>
+                <div class="native-actions"><button class="btn btn-primary" disabled="@historyRestoring" @onclick="RestoreHistory">@(historyRestoring ? "Restoring…" : "Restore this version")</button></div>
+            }
+        }
+        <div class="native-actions"><button id="history-close" class="btn btn-secondary" disabled="@historyRestoring" @onclick="CloseHistory">Close</button></div>
+    </section></div>
+}
 @code {
     private string libraryHtml = "", startError = "", message = "", importError = "";
     private string pendingJson = "";
+    private string? historySongId, historyProfile, statusProfile;
+    private LocalLibraryStore? historyStore, statusStore;
+    private List<SongHistoryEntry> historyEntries = [];
+    private SongHistoryEntry? historySelected;
+    private string historyError = "";
+    private bool historyRestoring, historyNeedsFocus, syncActive;
+    private LocalSyncStatus localSync = new(0, null);
+    private SyncStatusView syncView = SyncStatusView.Create(false, false, true, false, false, 0, null);
+    private string LastCheckLabel => localSync.LastChecked is { } time ? $"Last successful cloud check: {time.ToLocalTime():g}" : "No successful cloud check on this device yet.";
+    private static string HistoryTime(SongHistoryEntry entry) => DateTimeOffset.FromUnixTimeMilliseconds(entry.SavedAt).ToLocalTime().ToString("G");
     private bool accountOpen, busy, ready, cloudError;
     private CancellationTokenSource? authWait;
     private ImportPreview? preview;
@@ -77,6 +111,7 @@
     }
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (historyNeedsFocus) { historyNeedsFocus = false; await JS.InvokeVoidAsync("NativeBridge.focusHistory"); }
         if (!firstRender) return;
         try
         {
@@ -96,6 +131,7 @@
     [JSInvokable] public async Task SaveStorage(Dictionary<string,string> snapshot)
     {
         await Session.SaveAsync(snapshot);
+        await UpdateAccount();
         if (Session.SignedIn) RequestAutomaticSync();
     }
     [JSInvokable] public Task ExportFile(string filename, string json) => Platform.ExportAsync(filename,json);
@@ -112,7 +148,57 @@
     {
         accountOpen = true;
         if (!Session.HasAccountLibrary) message = "";
+        await UpdateAccount();
         await InvokeAsync(StateHasChanged);
+    }
+    [JSInvokable] public async Task OpenSongHistory(string songId)
+    {
+        if (historyRestoring || busy) return;
+        await operations.WaitAsync(lifetime.Token);
+        try
+        {
+            historyProfile = Session.ProfileId; historyStore = Session.Store; historySongId = songId; historyError = "";
+            historyEntries = []; historySelected = null; historyNeedsFocus = true;
+            historyEntries = await historyStore.ReadSongHistoryAsync(historyProfile, songId, lifetime.Token);
+            historySelected = historyEntries.FirstOrDefault();
+        }
+        catch (Exception ex) { historyError = ex.Message; }
+        finally { operations.Release(); await InvokeAsync(StateHasChanged); }
+    }
+    private void SelectHistory(ChangeEventArgs args)
+    {
+        historySelected = long.TryParse(args.Value?.ToString(), out var version) ? historyEntries.FirstOrDefault(e => e.Version == version) : null;
+    }
+    private async Task CloseHistory()
+    {
+        if (historyRestoring) return;
+        historySongId = null; historySelected = null; historyEntries = [];
+        await InvokeAsync(StateHasChanged);
+        await JS.InvokeVoidAsync("NativeBridge.closeHistory");
+        _ = ApplyPendingRefresh();
+    }
+    private async Task HistoryKeyDown(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape") await CloseHistory();
+    }
+    private async Task RestoreHistory()
+    {
+        if (historySelected is null || historyRestoring) return;
+        historyRestoring = true; historyError = "";
+        await operations.WaitAsync(lifetime.Token);
+        try
+        {
+            if (historyProfile != Session.ProfileId || !ReferenceEquals(historyStore, Session.Store)) throw new InvalidOperationException("The library changed. Reopen history for the current account.");
+            await JS.InvokeVoidAsync("NativeBridge.flush");
+            await Session.Store.RestoreSongHistoryAsync(Session.ProfileId, historySongId!, historySelected.Version, lifetime.Token);
+            await Refresh();
+            historyRestoring = false;
+            await CloseHistory();
+            await JS.InvokeVoidAsync("NativeBridge.showToast", "Version restored and saved on this device.", "success");
+            if (Session.SignedIn) RequestAutomaticSync();
+        }
+        catch (Exception ex) { historyError = ex.Message; }
+        finally { historyRestoring = false; operations.Release(); await UpdateAccount(); }
     }
     private void CloseAccount() { accountOpen = false; }
     private void CancelImport() { preview = null; pendingJson = ""; importError = ""; _ = ApplyPendingRefresh(); }
@@ -123,7 +209,8 @@
         {
             if (authWait is not null) { authWait.Cancel(); return; }
             if (ready && await JS.InvokeAsync<bool>("NativeBridge.dismissConfirmation")) return;
-            if (busy || !ready) return;
+            if (historyRestoring || busy || !ready) return;
+            if (historySongId is not null) { await CloseHistory(); StateHasChanged(); return; }
             if (preview is not null) { CancelImport(); StateHasChanged(); return; }
             if (accountOpen) { CloseAccount(); StateHasChanged(); return; }
             handled = await JS.InvokeAsync<bool>("NativeBridge.handleBack");
@@ -177,15 +264,33 @@
     private async Task SyncInternal()
     {
         if (!Session.SignedIn) return;
-        await UpdateAccount("syncing");
-        var result = await Session.SyncAsync(lifetime.Token); cloudError = result.Remaining > 0;
-        refreshPending = true;
-        await DeliverPendingRefresh();
-        message = result.Issues.Count > 0
-            ? $"{result.Issues.Count} item(s) need attention: {string.Join(", ", result.Issues.Take(3).Select(issue => issue.DisplayName))}{(result.Issues.Count > 3 ? ", and more" : "")}. They remain saved on this device. Repair missing song references or invalid imported data, then refresh."
-            : result.Remaining == 0 ? "Library is up to date." : "Changes are saved on this device. Refresh to retry, or reconnect to sync.";
+        syncActive = true;
+        try {
+            await UpdateAccount();
+            var result = await Session.SyncAsync(lifetime.Token); cloudError = result.Issues.Count > 0;
+            refreshPending = true;
+            await DeliverPendingRefresh();
+            message = result.Issues.Count > 0
+                ? $"{result.Issues.Count} item(s) need attention: {string.Join(", ", result.Issues.Take(3).Select(issue => issue.DisplayName))}{(result.Issues.Count > 3 ? ", and more" : "")}. They remain saved on this device. Repair missing song references or invalid imported data, then refresh."
+                : result.Remaining == 0 ? "Library is up to date." : "Changes are saved on this device. Refresh to retry, or reconnect to sync.";
+        } finally { syncActive = false; }
     }
-    private Task UpdateAccount(string? status = null) => ready ? JS.InvokeVoidAsync("NativeBridge.setAccount", new { signedIn = Session.HasAccountLibrary, email = Session.Email, displayName = Session.DisplayName, avatarUrl = Session.AvatarUrl, status = status ?? (!SyncSignals.IsConnected ? "offline" : (cloudError || (Session.HasAccountLibrary && !Session.SignedIn)) ? "error" : Session.SignedIn ? "idle" : "offline"), message }).AsTask() : Task.CompletedTask;
+    private async Task UpdateAccount()
+    {
+        if (!ready) return;
+        var profile = Session.ProfileId; var store = Session.Store;
+        if (statusProfile != profile || !ReferenceEquals(statusStore, store))
+        {
+            statusProfile = profile; statusStore = store; cloudError = false; message = "";
+        }
+        var observed = await store.ReadLocalSyncStatusAsync(profile, lifetime.Token);
+        if (profile != Session.ProfileId || !ReferenceEquals(store, Session.Store)) return;
+        localSync = observed;
+        syncView = SyncStatusView.Create(Session.HasAccountLibrary, Session.SignedIn, SyncSignals.IsConnected, syncActive, cloudError, localSync.Pending, localSync.LastChecked);
+        await JS.InvokeVoidAsync("NativeBridge.setAccount", new { signedIn = Session.HasAccountLibrary, email = Session.Email, displayName = Session.DisplayName, avatarUrl = Session.AvatarUrl,
+            status = syncView.Kind, statusTitle = syncView.Title, statusDetail = syncView.Detail, lastCheck = Session.HasAccountLibrary ? LastCheckLabel : "", message });
+        await InvokeAsync(StateHasChanged);
+    }
     private void RequestAutomaticSync() { _ = RequestSync(); }
     private void ConnectionChanged() { _ = PublishConnectionState(); }
     private async Task PublishConnectionState()
@@ -225,7 +330,7 @@
     private async Task DeliverPendingRefresh()
     {
         if (!refreshPending) return;
-        if (preview is not null || !await JS.InvokeAsync<bool>("NativeBridge.canRefresh")) {
+        if (historySongId is not null || preview is not null || !await JS.InvokeAsync<bool>("NativeBridge.canRefresh")) {
             await JS.InvokeVoidAsync("NativeBridge.setRefreshPending", true); return;
         }
         await Refresh(); refreshPending = false;

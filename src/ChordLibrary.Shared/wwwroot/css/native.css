@@ -26,3 +26,12 @@
 
 /* Retained rows update quietly; background sync never replays entrance animations. */
 [data-library-row] { animation: none !important; }
+
+/* History uses the active RUACH theme tokens and stays usable above mobile keyboards. */
+.native-history {width:min(100%,720px);}
+.native-history select {width:100%;min-height:44px;padding:10px;background:var(--bg-primary);color:var(--text-primary);border:1px solid var(--border-color);border-radius:8px;margin-bottom:16px;}
+.native-history h3 {overflow-wrap:anywhere;}
+.history-sheet {white-space:pre-wrap;overflow-wrap:anywhere;max-height:35dvh;overflow:auto;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:12px;padding:16px;font:14px/1.6 var(--font-mono);color:var(--text-primary);}
+.account-sync-summary {font-size:12px;line-height:1.5;color:var(--text-secondary);padding:12px 0 0;overflow-wrap:anywhere;}
+.sync-indicator-mini.pending {background:var(--text-muted);}
+.native-history button:focus-visible,.native-history select:focus-visible {outline:2px solid var(--accent);outline-offset:3px;}

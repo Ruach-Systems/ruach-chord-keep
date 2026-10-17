@@ -86,6 +86,12 @@
         avatar.src = nextAvatar;
       } else avatar.removeAttribute('src');
     }
+    const summary = byId('account-sync-status');
+    if (summary) {
+      const title = storageError ? 'Could not save to this device' : revision > savedRevision ? 'Saving to this device…' : account.statusTitle || '';
+      const detail = storageError || account.statusDetail || '';
+      summary.textContent = [title, detail, account.lastCheck].filter(Boolean).join(' · ');
+    }
     if (name) name.textContent = account.signedIn ? (account.displayName || 'Your account') : 'Local library';
     if (email) email.textContent = account.email || '';
     if (signIn) {
@@ -104,7 +110,7 @@
         'sync-error': account.message || 'Sync unavailable. Changes remain saved on this device.',
         offline: account.signedIn ? 'Offline. Changes remain saved on this device.' : 'Saved on this device'
       };
-      indicator.title = storageError || (revision > savedRevision ? 'Saving to this device…' : labels[status] || 'Saved on this device');
+      indicator.title = storageError || (revision > savedRevision ? 'Saving to this device…' : [account.statusTitle, account.lastCheck].filter(Boolean).join('. ') || labels[status] || 'Saved on this device');
       if (button) button.setAttribute('aria-label', 'Account & sync. ' + indicator.title);
     }
   }
@@ -296,6 +302,24 @@
     showToast,
     flush,
     openAccount,
+    async openSongHistory(songId) {
+      await flush();
+      return await requireBridge().invokeMethodAsync('OpenSongHistory', songId);
+    },
+    focusHistory() {
+      const dialog = document.getElementById('song-history-dialog');
+      if (!dialog) return;
+      dialog.focus();
+      dialog.onkeydown = event => {
+        if (event.key !== 'Tab') return;
+        const controls = [...dialog.querySelectorAll('button:not(:disabled),select:not(:disabled)')];
+        const first = controls[0], last = controls[controls.length - 1];
+        if (!first) { event.preventDefault(); return; }
+        if (event.shiftKey && (document.activeElement === first || document.activeElement === dialog)) { event.preventDefault(); last.focus(); }
+        else if (!event.shiftKey && (document.activeElement === last || document.activeElement === dialog)) { event.preventDefault(); first.focus(); }
+      };
+    },
+    closeHistory() { document.getElementById('btn-song-actions')?.focus(); },
     async exportFile(filename, json) {
       await flush();
       await requireBridge().invokeMethodAsync('ExportFile', filename, json);

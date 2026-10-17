@@ -26,7 +26,7 @@
   const button = (root, id) => byId(root).querySelector('[data-id="' + id + '"]');
   const openSidebar = () => { if (innerWidth < 768 && !byId('sidebar').classList.contains('open')) byId('menu-toggle').click(); };
   try {
-    byId('app').innerHTML = await (await fetch('../src/ChordLibrary.Shared/Assets/library.html')).text();
+    byId('app').innerHTML = await (await fetch('../src/ChordLibrary.Shared/Assets/library.html', { cache: 'no-store' })).text();
     document.querySelector('.app-product-logo').src='../src/ChordLibrary.Shared/wwwroot/images/chordkeep.svg';
     await NativeBridge.initialize({ invokeMethodAsync: async method => {
       nativeCalls.push(method);

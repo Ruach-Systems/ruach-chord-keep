@@ -223,11 +223,13 @@ test('setlist keyboard navigation is bounded and does not also run when a sideba
   const tabsStart = appSource.indexOf("    $$('.tab-btn').forEach(btn => {", appSource.indexOf('function initEventListeners'));
   const tabsEnd = appSource.indexOf('\n    });', tabsStart) + 8;
   let selectedTab = 'songs';
+  const libraryRoot = { inert: false };
   const context = vm.createContext({
     dom: { songContentSection: { scrollTop: 7 } },
     document: { addEventListener: (event, callback) => { handlers[event] = callback; },
       querySelector: () => ({ focus() {} }) },
     $$: () => tabs,
+    $: id => id === "library-root" ? libraryRoot : null,
     renderSongDetail() {}, updateSheetScrollTopButton() {},
     setSidebarTab: tab => { selectedTab = tab; }
   });
@@ -251,6 +253,9 @@ test('setlist keyboard navigation is bounded and does not also run when a sideba
   handlers.keydown(tabKey); // The same event bubbles from the tab to document.
   assert.equal(selectedTab, 'setlists');
   assert.equal(context.current(), 'second', 'a tab-handled key must not also navigate the song sheet');
+  libraryRoot.inert = true;
+  handlers.keydown(right());
+  assert.equal(context.current(), 'second', 'native history dialog must block underlying song navigation');
 });
 
 test('compact QR and legacy single-song data remain readable and compression is explicit', () => {
@@ -650,4 +655,29 @@ test('mobile QR results load a song draft; cancellation and invalid QR do not ch
   context.NativeBridge.scanQr = async () => { throw new Error('Camera unavailable'); };
   await context.startQrScan();
   assert.match(notices.at(-1).message, /Unable to scan QR code: Camera unavailable/);
+});
+
+
+test('song history waits for durable save before asking native storage', async () => {
+  const saving = deferred(); const host = bridgeContext(() => saving.promise);
+  await host.context.NativeBridge.initialize(host.reference, {});
+  host.context.LibraryStorage.setItem('chord-library-songs', '[{"id":"a"}]');
+  const opening = host.context.NativeBridge.openSongHistory('a');
+  await Promise.resolve();
+  assert.equal(host.calls.some(call => call.method === 'OpenSongHistory'), false);
+  saving.resolve(); await opening;
+  assert.equal(host.calls.at(-1).method, 'OpenSongHistory');
+  assert.equal(host.calls.at(-1).args[0], 'a');
+});
+
+test('sync summary uses plain text, reports last check and resets on account change', () => {
+  const host = bridgeContext(), summary = {}, indicator = {};
+  host.context.document.getElementById = id => ({'account-sync-status': summary, 'sync-indicator': indicator})[id] || null;
+  host.context.NativeBridge.setAccount({signedIn:true,status:'pending',statusTitle:'Saved on this device · 2 pending',statusDetail:'<script>never markup</script>',lastCheck:'Last check: today'});
+  assert.match(summary.textContent, /2 pending/);
+  assert.match(summary.textContent, /<script>never markup<\/script>/);
+  assert.match(indicator.title, /Last check: today/);
+  host.context.NativeBridge.setAccount({signedIn:false,status:'offline',statusTitle:'Saved on this device'});
+  assert.equal(summary.textContent, 'Saved on this device');
+  assert.doesNotMatch(indicator.title, /today|pending/);
 });

@@ -105,6 +105,8 @@ public sealed class LibrarySyncCoordinator(LocalLibraryStore store, SupabaseData
                 }
             }
             var remaining = await store.ReadSyncStateAsync(profileId, cancellationToken).ConfigureAwait(false);
+            EnsureAccount(owner);
+            await store.MarkCloudCheckedAsync(profileId, cancellationToken).ConfigureAwait(false);
             return new LibrarySyncResult(pulled, uploaded, [], remaining.PendingChanges.Count) { Issues = issues };
         }
         finally { _gate.Release(); }

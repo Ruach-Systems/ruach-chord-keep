@@ -49,6 +49,7 @@
           <button class="btn btn-primary user-dropdown-btn" id="btn-sign-in">
             Account & sync
           </button>
+          <p id="account-sync-status" class="account-sync-summary" role="status" aria-live="polite"></p>
           <p class="user-dropdown-version hidden" id="app-version"></p>
           <button class="btn btn-danger user-dropdown-btn hidden" id="btn-sign-out">
             Sign out
@@ -374,6 +375,10 @@
                       </svg>
                     </span>
                     <span>Share via QR</span>
+                  </button>
+                  <button class="song-action-menu-item" id="btn-song-history" role="menuitem">
+                    <span class="song-action-menu-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M3 11a9 9 0 1 1 2.6 7M3 4v7h7M12 7v5l3 2"/></svg></span>
+                    <span>Song history</span>
                   </button>
                   <button class="song-action-menu-item" id="btn-export-song" role="menuitem">
                     <span class="song-action-menu-icon" aria-hidden="true">

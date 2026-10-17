@@ -68,7 +68,7 @@ Both local publishers use `artifacts/release/<version>/<platform>/` and refuse t
 
 ## Validation and limitations
 
-- **Verify** runs on main pushes, pull requests and manual dispatch, with no signing credentials. It runs the existing C#/JavaScript suites and builds both targets.
+- **Verify** runs only on manual dispatch, with no signing credentials. Automatic push and pull-request triggers remain disabled. It runs the existing C#/JavaScript suites and builds both targets.
 - **Release packages** only runs on main, uses read-only permissions while building, and grants contents-write permission only to the short tag-preparation and final draft jobs. Actions are pinned to commit hashes. Signing secrets are scoped to the steps that need them.
 - All packages in a draft come from the same commit. `release-info.json` records that commit, version, Android build number and Windows signing status. `SHA256SUMS.txt` lets recipients verify downloaded files.
 - Passing a workflow establishes build/package checks, not real-device production readiness. Verify installation/upgrade, signup/recovery, configured Google sign-in, import of an actual export and two-device/offline sync before publishing. See [validation](validation.md).
