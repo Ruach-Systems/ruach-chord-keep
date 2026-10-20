@@ -1,5 +1,18 @@
 # Validation
 
+## Performance mode — October 21, 2026 (unreleased)
+
+- Added a copied, in-memory performance session for songs/setlists, persistent controls, bounded navigation, independent duplicate-entry scroll positions, five elapsed-time scroll speeds, focus containment and native foreground screen-awake handling. Native suspension and WebView visibility/blur pause scrolling.
+- Display patches read and update the latest SQLite record atomically, preserving newer cloud editorial fields. They remain ordinary LWW changes, do not create editorial history, and cannot resurrect deleted songs. Local reads/writes do not acquire the network-operation lock. Sync continues through existing triggers while UI delivery is deferred until exit.
+- All **222 .NET tests** passed: 97 Core, 38 Shared, 7 Native scanner, 80 Supabase. Added cases cover concurrent display patches, persisted/profile-isolated settings, no-op writes, preservation of cloud edits and extension metadata, revision/cursor preservation, invalid values, remote deletion and LWW.
+- All **36 JavaScript tests** passed. Performance unit checks cover copied data, duplicates/missing references, navigation boundaries, occurrence positions and elapsed-time scrolling.
+- **72 performance browser checks** passed: 9 behaviors at 320×740, 844×390, 768×1024 and 1280×800, each in light/dark themes. Checks include entry/exit, touch targets, stable cloud snapshots, field-only saves, removed-song fallback, scroll interruption/bottom detection, swipe discrimination, keyboard containment, settings-first Back/Escape, missing-reference confirmation, empty sets and unsaved edits.
+- Existing browser fixtures passed **110 regressions**: sync 24, setlist 17 and chord palette 14 at both desktop/mobile widths. One initial desktop drawer-animation assertion failed due to a fixed wait; changed that test to wait for the actual requested icon state and reran it successfully.
+- The actual Blazor host used an isolated `.local/performance-preview` directory. Created a disposable song, entered Performance mode, saved transpose/font/columns through JS-to-.NET calls, exited and reloaded, verified persisted settings and confirmed song history remained empty. Retested entry/display saves after the local/network lock separation. Screenshot: `.local/performance-mode-phone.png`.
+- Windows Release and Blazor preview validation builds passed with zero warnings/errors. Android Debug validation build also passed; no distributable or release workflow was requested.
+- **Not verified on a physical Android device:** `adb devices` listed none. Real screen timeout prevention/release, OS Back gestures and native background/resume touch behavior remain device acceptance items. Browser touch/lifecycle simulations and compilation do not establish those results. Windows screen timeout behavior also requires native runtime acceptance.
+- No hosted migrations, workflow changes, commit, push or release were performed.
+
 ## Local song history and clearer sync status — October 17, 2026 (unreleased)
 
 - Added per-profile SQLite history for previous title/artist/chord-sheet versions, capped at 30 per song. Editorial edits, imports and accepted cloud replacements capture the prior version in the same transaction; timestamp/layout-only changes and unchanged saves do not. Restore preserves current identity/layout/extra fields, archives replaced content and queues a fresh latest-wins edit. History is queried on demand and stays outside snapshots, exports and cloud requests.
@@ -271,3 +284,17 @@ Hosted SQL checks used synthetic, transaction-only identities. They do not estab
 - [Release packages run 37800353956](https://github.com/Ruach-Systems/ruach-chord-keep/actions/runs/37800353956) succeeded and created the unpublished `v1.0.10` draft from `bdae9a1311f151e22edaf5e7858c5282d5d52c3b`. Windows silent installation, installed-file checks and uninstall passed. Android v2/v3 signing checks passed.
 - Independently downloaded all five draft assets. All four manifest checksums matched, and release metadata matched source commit, version 1.0.10, Android build 11 and unsigned Windows status. The APK has ID `com.louiejeg.chordlibrary`, label ChordKeep and signing certificate SHA-256 `95831c04603c22a2ff37b9873949c9b3f973213ba6bb25f6ae4e4691df223fb8`, matching the verified previous release identity.
 - Downloads are `ChordKeep-1.0.10-windows-x64-setup.exe`, `ChordKeep-1.0.10-android.apk`, `release-info.json`, `SHA256SUMS.txt` and `WINDOWS-UNSIGNED.txt`. Physical Android and installed-production upgrade checks remain separate. This task does not authorize publishing the draft or generating future releases automatically.
+
+### Compact Performance controls (21 October 2026)
+Start performance is now an icon-only floating action on songs and setlists. Performance uses a 14px bold title without artist and a reserved right-side stack of 44px icon controls. Verified 36 JavaScript tests, phone dark and landscape light browser interaction checks (9 each), and Windows Debug build with no warnings/errors. Physical Android validation remains pending. No release created.
+Desktop dark browser checks also passed (9/9); mobile dark preview saved locally. Total responsive interaction checks: 27, plus a repeat mobile pass.
+
+Floating control placement correction: full-width Performance sheet with controls inset inside its scrollbar; content and bottom clearance retained. Phone browser checks 9/9, JavaScript tests 36/36, Windows Debug build passed (0 warnings/errors).
+
+Performance settings overlay correction: verified open and closed layouts at 328x650 dark, 844x390 light, and 1280x800 dark. All 27 browser checks and 36 JavaScript tests pass; Windows Debug build passes with 0 warnings/errors. Visually inspected each open settings panel; Close and Escape restore controls. Physical Android verification remains pending.
+
+Settings visual refinement: centered 360px dialog with dimmed backdrop, compact aligned rows, inline reset icon and accessible columns switch. Phone dark, desktop dark and short landscape light reviewed; 27 browser checks cover bounds, horizontal overflow, centering, focus and inert background. All 36 JS tests and Windows Debug build pass.
+
+Settings dismissal scroll regression: centralized settings open/close state restores sheet interactivity on Close, Escape, native Back and backdrop dismissal. Browser regression covers all paths after display edits. Actual PageDown after changing font moved scrollTop from 0 to 596. 9 browser checks, 36 JS tests and Windows Debug build pass.
+
+Performance no-wrap: original line breaks preserved with pre whitespace in single/two-column layouts. Verified computed styles and horizontal overflow at 320px (two-column scroll width 524px). Existing 9 browser checks, 36 JS tests and Windows Debug build pass. Horizontal touch pans overflowing sheets.

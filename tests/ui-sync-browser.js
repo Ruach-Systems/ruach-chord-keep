@@ -43,9 +43,15 @@
     await reset();
     await check('drawer toggle reflects open and closed state through every dismissal route', async () => {
       const toggle = byId('menu-toggle'), drawer = byId('sidebar');
-      const waitForAnimation = () => new Promise(resolve => setTimeout(resolve, 260));
       const verify = async expanded => {
-        await waitForAnimation();
+        // Wait for the requested visual state, not a fixed animation duration.
+        const deadline = Date.now() + 2000;
+        while (Date.now() < deadline) {
+          const opacity = Number(getComputedStyle(toggle.querySelector('.menu-toggle-line-middle')).opacity);
+          const transform = new DOMMatrix(getComputedStyle(toggle.querySelector('.menu-toggle-line-top')).transform);
+          if (opacity === (expanded ? 0 : 1) && (expanded ? transform.b > 0.7 : transform.f === -6 && transform.b === 0)) break;
+          await new Promise(resolve => setTimeout(resolve, 30));
+        }
         assert(toggle.getAttribute('aria-expanded') === String(expanded), 'Toggle state is stale');
         assert(toggle.getAttribute('aria-label') === (expanded ? 'Hide library panel' : 'Show library panel'), 'Accessible action is stale');
         const middle = getComputedStyle(toggle.querySelector('.menu-toggle-line-middle'));

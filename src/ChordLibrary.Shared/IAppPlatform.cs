@@ -6,6 +6,7 @@ public interface IAppPlatform
     bool IsNative { get; }
     string AppVersion => string.Empty;
     bool SupportsQrImport => false;
+    Task SetPerformanceActiveAsync(bool active) => Task.CompletedTask;
     string OAuthRedirectUri { get; }
     Task<string?> PickJsonAsync();
     Task ExportAsync(string filename, string json);

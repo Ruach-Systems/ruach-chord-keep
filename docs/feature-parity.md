@@ -12,6 +12,8 @@ The original stylesheet forms the basis of `src/ChordLibrary.Shared/wwwroot/css/
 
 ## Implemented mirror
 
+Performance mode adds a stable session snapshot, saved display adjustments, persistent controls, five scroll speeds and foreground-only screen-awake handling. See [Performance mode](performance-mode.md) for behavior, sync boundaries and native-device acceptance.
+
 | Area | Preserved behavior |
 | --- | --- |
 | Home | Recent songs and setlists, counts, relative update times, direct opening and View all actions. |

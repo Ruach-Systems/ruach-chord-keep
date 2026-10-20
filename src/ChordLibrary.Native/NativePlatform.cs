@@ -13,6 +13,20 @@ public sealed class NativeSecretStore : ISecretStore
 }
 public sealed class NativePlatform : IAppPlatform
 {
+    private bool performanceActive;
+    private bool foreground = true;
+    public Task SetPerformanceActiveAsync(bool active)
+    {
+        performanceActive = active;
+        return UpdateAwakeAsync();
+    }
+    public Task SetForegroundAsync(bool active)
+    {
+        foreground = active;
+        return UpdateAwakeAsync();
+    }
+    private Task UpdateAwakeAsync() => MainThread.InvokeOnMainThreadAsync(() =>
+        DeviceDisplay.Current.KeepScreenOn = performanceActive && foreground);
     public string DataDirectory => Path.Combine(FileSystem.AppDataDirectory, "library");
     public bool IsNative => true;
     public string AppVersion => AppInfo.Current.VersionString;

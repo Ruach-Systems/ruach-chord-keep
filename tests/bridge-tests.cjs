@@ -56,7 +56,7 @@ test('all shipped JavaScript parses, including the loader dependency order', () 
   for (const file of fs.readdirSync(scripts).filter(file => file.endsWith('.js'))) {
     new vm.Script(fs.readFileSync(path.join(scripts, file), 'utf8'), { filename: file });
   }
-  assert.match(fs.readFileSync(path.join(scripts, 'loader.js'), 'utf8'), /'view-updates.js', 'app.js'/);
+  assert.match(fs.readFileSync(path.join(scripts, 'loader.js'), 'utf8'), /'view-updates.js', 'performance.js', 'app.js'/);
 });
 
 function viewContext() {
@@ -577,11 +577,15 @@ test('background refresh waits for native saves, source editor, open modal and u
       shareQrModal: modal, scanQrOverlay: modal },
     $: () => modal
   });
-  vm.runInContext('let inlineEditingSongId = null, undoCleanup = null;\n' +
+  vm.runInContext('let inlineEditingSongId = null, undoCleanup = null, performanceStarting = false, performanceView = null;\n' +
     sourceFunction('canRefreshNativeSnapshot') +
     '\nglobalThis.setDraft = value => inlineEditingSongId = value;\n' +
-    'globalThis.setUndo = value => undoCleanup = value;', context);
+    'globalThis.setUndo = value => undoCleanup = value;\n' +
+    'globalThis.setPerformance = value => performanceView = {active:value};', context);
   assert.equal(context.canRefreshNativeSnapshot(), true);
+  context.setPerformance(true);
+  assert.equal(context.canRefreshNativeSnapshot(), false);
+  context.setPerformance(false);
   context.setDraft('editing-song');
   assert.equal(context.canRefreshNativeSnapshot(), false);
   context.setDraft(null);

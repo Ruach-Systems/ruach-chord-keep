@@ -374,15 +374,23 @@
     btn.classList.add('autoscroll-active');
     btn.textContent = '⏸';
     const speed = AUTO_SCROLL_SPEEDS[autoScrollSpeed];
-    autoScrollInterval = setInterval(() => {
+    let last = null;
+    let position = (selectedSongId ? dom.songContentSection : dom.content).scrollTop;
+    const tick = time => {
       const scrollSurface = selectedSongId ? dom.songContentSection : dom.content;
-      scrollSurface.scrollTop += speed;
-    }, 30);
+      const maximum = Math.max(0, scrollSurface.scrollHeight - scrollSurface.clientHeight);
+      if (last !== null) position = Math.min(maximum, position + speed * Math.min(time - last, 100) / 30);
+      scrollSurface.scrollTop = position;
+      last = time;
+      if (position >= maximum) { stopAutoScroll(); return; }
+      autoScrollInterval = requestAnimationFrame(tick);
+    };
+    autoScrollInterval = requestAnimationFrame(tick);
   }
 
   function stopAutoScroll() {
     if (autoScrollInterval) {
-      clearInterval(autoScrollInterval);
+      cancelAnimationFrame(autoScrollInterval);
       autoScrollInterval = null;
     }
     const btn = $('btn-autoscroll');
@@ -825,14 +833,16 @@
     dom.transposeAccept.classList.toggle('hidden', transposeSteps === 0);
 
     // Apply font size to song content
-    const lineHeight = Math.round(currentFontSize * 1.6);
-    dom.songContent.style.fontSize = currentFontSize + 'px';
+    const displayFontSize = clampFontSize(song.fontSize || currentFontSize);
+    dom.fontSizeSelect.value = String(displayFontSize);
+    const lineHeight = Math.round(displayFontSize * 1.6);
+    dom.songContent.style.fontSize = displayFontSize + 'px';
     dom.songContent.style.lineHeight = lineHeight + 'px';
-    dom.contentEditableHighlight.style.fontSize = currentFontSize + 'px';
+    dom.contentEditableHighlight.style.fontSize = displayFontSize + 'px';
     dom.contentEditableHighlight.style.lineHeight = lineHeight + 'px';
-    dom.inlineSongContent.style.fontSize = currentFontSize + 'px';
+    dom.inlineSongContent.style.fontSize = displayFontSize + 'px';
     dom.inlineSongContent.style.lineHeight = lineHeight + 'px';
-    dom.inlineSongHighlight.style.fontSize = currentFontSize + 'px';
+    dom.inlineSongHighlight.style.fontSize = displayFontSize + 'px';
     dom.inlineSongHighlight.style.lineHeight = lineHeight + 'px';
 
     const isInlineEditing = inlineEditingSongId === song.id;
@@ -910,6 +920,7 @@
     const setlistSongs = setlist.songIds
       .map(id => songs.find(s => s.id === id))
       .filter(Boolean);
+    $('btn-setlist-performance').disabled = setlistSongs.length === 0;
 
     dom.setlistSongCount.textContent = `${setlistSongs.length} ${setlistSongs.length === 1 ? 'song' : 'songs'}`;
     dom.setlistUpdated.textContent = `Updated ${formatRelativeUpdate(setlist.updatedAt || setlist.createdAt)}`;
@@ -1020,6 +1031,7 @@
   }
 
   function handleAppBack() {
+    if (performanceView?.active) return performanceView.back();
     if (dom.setlistSongs?._sorter?.cancel()) return true;
     const visible = element => element && !element.classList.contains('hidden');
     if (visible(dom.scanQrOverlay)) { closeScannerOverlay(); return true; }
@@ -2998,6 +3010,8 @@
       e.target.value = currentFontSize.toString();
       LibraryStorage.setItem(STORAGE_KEYS.FONT_SIZE, currentFontSize.toString());
       if (selectedSongId) {
+        const song = songs.find(item => item.id === selectedSongId);
+        if (song?.fontSize) { song.fontSize = currentFontSize; song.updatedAt = Date.now(); saveSongs(); }
         renderSongDetail();
       }
     });
@@ -3540,6 +3554,58 @@
   // Initialization
   // ================================================
 
+  let performanceView = null;
+  let performanceStarting = false;
+  async function startPerformance(fromSetlist) {
+    if (performanceStarting || performanceView?.active) return;
+    const proceed = await new Promise(resolve => {
+      if (requestDiscardInlineEdit(() => resolve(true), () => resolve(false))) resolve(true);
+    });
+    if (!proceed || performanceStarting || performanceView?.active) return;
+    performanceStarting = true;
+    try {
+      closeSongActionsMenu(); stopAutoScroll(); closeSidebar();
+      await NativeBridge.flush();
+      const library = await NativeBridge.readPerformanceLibrary();
+      const setlistId = fromSetlist ? selectedSetlistId : viewingFromSetlistId;
+      const setlist = library.setlists.find(item => item.id === setlistId);
+      const ids = setlist ? setlist.songIds : [selectedSongId];
+      const available = ids.filter(id => library.songs.some(song => song.id === id));
+      const index = fromSetlist ? 0 : available[viewingSetlistSongIndex] === selectedSongId
+        ? viewingSetlistSongIndex : Math.max(0, available.indexOf(selectedSongId));
+      const session = new ChordPerformance.PerformanceSession(library.songs, ids, index);
+      if (!session.entries.length) { showToast('There are no available songs to perform.', 'info'); return; }
+      if (session.missing) {
+        const accepted = await new Promise(resolve => openConfirmModal(
+          `${session.missing} missing song reference(s) will be skipped. Continue with the available songs?`,
+          () => resolve(true), {title:'Some songs are unavailable', action:'Start performance', cancel:'Cancel', onCancel:() => resolve(false)}));
+        if (!accepted) return;
+      }
+      performanceView = ChordPerformance.create({
+        setlist, fontSize:currentFontSize, background:document.querySelector('.app'),
+        render:(text, steps) => highlightChords(transposeText(text, steps)),
+        exit:(id, scroll) => {
+          performanceView = null;
+          if (songs.some(song => song.id === id)) {
+            if (setlist && setlists.some(item => item.id === setlist.id)) {
+              selectedSetlistId = setlist.id; viewingFromSetlistId = setlist.id;
+              const currentSetlist = setlists.find(item => item.id === setlist.id);
+              selectSong(id, true, currentSetlist.songIds.filter(songId => songs.some(song => song.id === songId)).indexOf(id));
+            } else selectSong(id);
+            dom.songContentSection.scrollTop = scroll;
+            dom.songActionsButton.focus();
+          } else if (setlist && setlists.some(item => item.id === setlist.id)) {
+            selectSetlist(setlist.id); $('btn-setlist-performance').focus();
+          } else { goHome(); $('menu-toggle').focus(); }
+        }
+      });
+      await performanceView.start(session);
+    } catch (error) {
+      await NativeBridge.setPerformanceActive(false).catch(() => {});
+      showToast('Could not start performance: ' + error.message, 'error');
+    } finally { performanceStarting = false; NativeBridge.notifyUiReady?.(); }
+  }
+
   function refreshNativeSettings() {
     loadTheme();
     loadNotationPref();
@@ -3552,6 +3618,7 @@
   }
 
   async function canSwitchNativeAccount() {
+    if (performanceStarting || performanceView?.active) return false;
     if (!dom.confirmModal.classList.contains('hidden')) return false;
     const leaveInline = await new Promise(resolve => {
       if (requestDiscardInlineEdit(() => resolve(true), () => resolve(false))) resolve(true);
@@ -3627,6 +3694,7 @@
   }
 
   function canRefreshNativeSnapshot() {
+    if (performanceStarting || performanceView?.active) return false;
     if (inlineEditingSongId || undoCleanup || dom.setlistSongs?._syncInteraction) return false;
     const dialogs = [dom.songModal, dom.setlistModal, dom.addSongsModal, dom.confirmModal,
       dom.shareQrModal, dom.scanQrOverlay, $('preferences-modal'), $('tour-overlay')];
@@ -3674,6 +3742,8 @@
   }
 
   function init() {
+    $('btn-song-performance').onclick = () => startPerformance(false);
+    $('btn-setlist-performance').onclick = () => startPerformance(true);
     NativeBridge.registerAppLifecycle({
       handleBack: handleAppBack,
       dismissConfirmation,

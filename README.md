@@ -1,5 +1,7 @@
 # ChordKeep — .NET MAUI Blazor Hybrid
 
+[Performance mode](docs/performance-mode.md) provides a focused live reader for songs and setlists, with stable session content, saved display adjustments and screen-awake handling.
+
 **ChordKeep** is a RUACH product for keeping chord sheets and arranging setlists, formerly named Chord Library. The approved Royal Folio crown-and-musical-folio emblem is its distinct app logo. See [identity and upgrade compatibility](docs/identity.md) and [platform asset kit](branding/chordkeep/README.md).
 
 Windows and Android native app mirroring louieje-g/chordlibrary at commit `230ad36e863f3175438a92520b3a567d516c2afe`.

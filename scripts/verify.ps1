@@ -6,7 +6,7 @@ try {
         & dotnet test $project --nologo -v minimal
         if ($LASTEXITCODE -ne 0) { throw "Tests failed: $project" }
     }
-    & node --test tests/bridge-tests.cjs
+    & node --test tests/bridge-tests.cjs tests/performance-tests.cjs
     if ($LASTEXITCODE -ne 0) { throw 'JavaScript tests failed.' }
     & dotnet build src/ChordLibrary.Native/ChordLibrary.Native.csproj -f net10.0-windows10.0.19041.0 --nologo -v minimal
     if ($LASTEXITCODE -ne 0) { throw 'Windows build failed.' }

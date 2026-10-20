@@ -10,6 +10,7 @@ builder.Services.AddSingleton(AppDefaults.Load());
 builder.Services.AddScoped<AppSession>();
 builder.Services.AddScoped<AppBackNavigation>();
 builder.Services.AddScoped<AppSyncSignals>();
+builder.Services.AddScoped<PerformanceLifecycle>();
 builder.Services.AddSingleton(new HttpClient { Timeout = TimeSpan.FromSeconds(45) });
 var app = builder.Build();
 app.UseAntiforgery();

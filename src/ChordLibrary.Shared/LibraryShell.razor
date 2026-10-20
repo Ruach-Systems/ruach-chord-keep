@@ -7,6 +7,7 @@
 @inject IAppPlatform Platform
 @inject AppSession Session
 @inject AppBackNavigation BackNavigation
+@inject PerformanceLifecycle PerformanceLifecycle
 @inject AppSyncSignals SyncSignals
 
 <div id="library-root" inert="@(accountOpen || historySongId is not null || preview is not null || busy)">@((MarkupString)libraryHtml)</div>
@@ -101,9 +102,37 @@
     private readonly CancellationTokenSource lifetime = new();
     private AppSyncScheduler? syncScheduler;
     private bool refreshPending;
+    private string? performanceProfile;
+    private LocalLibraryStore? performanceStore;
+    // The database has its own transaction gate. Do not wait for an in-flight
+    // network request just to enter the reader or persist display preferences.
+    [JSInvokable] public Task<LibraryDocument> ReadPerformanceLibrary() =>
+        Session.Store.ReadDocumentAsync(Session.ProfileId, lifetime.Token);
+    [JSInvokable] public async Task SetPerformanceActive(bool active)
+    {
+        if (active) { performanceProfile = Session.ProfileId; performanceStore = Session.Store; }
+        await Platform.SetPerformanceActiveAsync(active);
+        if (!active) {
+            performanceProfile = null; performanceStore = null;
+            refreshPending = true;
+            await DeliverPendingRefresh();
+        }
+    }
+    [JSInvokable] public async Task<bool> SavePerformanceDisplay(string songId, SongDisplayPatch patch)
+    {
+        var profile = performanceProfile; var store = performanceStore;
+        if (profile is null || store is null || profile != Session.ProfileId || !ReferenceEquals(store, Session.Store))
+            throw new InvalidOperationException("The active library changed. Exit performance mode.");
+        var saved = await store.PatchSongDisplayAsync(profile, songId, patch, lifetime.Token);
+        refreshPending = true;
+        await UpdateAccount();
+        RequestAutomaticSync();
+        return saved;
+    }
     private readonly SemaphoreSlim operations = new(1,1);
     protected override void OnInitialized()
     {
+        PerformanceLifecycle.Suspended += SuspendPerformance;
         backRegistration = BackNavigation.Register(HandleBackAsync);
         syncScheduler = new AppSyncScheduler(ProcessSyncRequest);
         using var stream = typeof(LibraryShell).Assembly.GetManifestResourceStream("ChordLibrary.Shared.Assets.library.html")!;
@@ -349,11 +378,20 @@
     }
     public async ValueTask DisposeAsync()
     {
+        PerformanceLifecycle.Suspended -= SuspendPerformance;
+        await Platform.SetPerformanceActiveAsync(false);
         backRegistration?.Dispose();
         SyncSignals.RefreshRequested -= RequestAutomaticSync;
         SyncSignals.ConnectionChanged -= ConnectionChanged;
         lifetime.Cancel();
         if (syncScheduler is not null) await syncScheduler.DisposeAsync();
         reference?.Dispose(); lifetime.Dispose();
+    }
+    private async void SuspendPerformance()
+    {
+        try { if (ready) await InvokeAsync(() => JS.InvokeVoidAsync("NativeBridge.suspendPerformance").AsTask()); }
+        catch (JSDisconnectedException) { }
+        catch (ObjectDisposedException) { }
+        catch (TaskCanceledException) { }
     }
 }

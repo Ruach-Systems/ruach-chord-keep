@@ -301,6 +301,10 @@
     },
     showToast,
     flush,
+    setPerformanceActive(active) { return requireBridge().invokeMethodAsync('SetPerformanceActive', active); },
+    suspendPerformance() { window.dispatchEvent(new Event('performance-suspend')); },
+    readPerformanceLibrary() { return requireBridge().invokeMethodAsync('ReadPerformanceLibrary'); },
+    savePerformanceDisplay(id, patch) { return requireBridge().invokeMethodAsync('SavePerformanceDisplay', id, patch); },
     openAccount,
     async openSongHistory(songId) {
       await flush();
