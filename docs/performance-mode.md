@@ -30,4 +30,4 @@ The reader uses a bold 14px title without the artist. Icon-only Exit, Previous/N
 
 Display settings opens in a centered, dimmed-backdrop dialog with aligned rows, an inline transpose reset, a two-column switch, and a dedicated Close button. Floating actions hide while settings is open. Close, Escape and Android Back return focus to the settings icon; keyboard focus stays within the open settings panel. Short windows scroll the dialog vertically.
 
-Performance chord sheets preserve original line breaks and never wrap long lines. Scroll horizontally to read long lines; when horizontal overflow exists, touch gestures pan the sheet rather than navigate songs. Previous/Next buttons and keyboard navigation remain available.
+Performance chord sheets preserve original line breaks and never wrap long lines. Horizontal overflow is clipped, matching the default reader; vertical scrolling and setlist swipe navigation remain available. Previous/Next buttons and keyboard navigation remain available.

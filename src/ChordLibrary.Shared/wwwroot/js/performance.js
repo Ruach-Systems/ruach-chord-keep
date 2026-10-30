@@ -201,8 +201,7 @@
         sheet.addEventListener('touchstart', e => { pause(); touch = e.touches.length === 1 ? {x:e.touches[0].clientX,y:e.touches[0].clientY} : null; }, {passive:true});
         sheet.addEventListener('touchcancel', () => { touch = null; });
         sheet.addEventListener('touchend', e => {
-          // Horizontal gestures pan long chord lines instead of changing songs.
-          if (!touch || !options.setlist || !e.changedTouches.length || sheet.scrollWidth > sheet.clientWidth + 1) return;
+          if (!touch || !options.setlist || !e.changedTouches.length) return;
           const dx = e.changedTouches[0].clientX-touch.x, dy = e.changedTouches[0].clientY-touch.y;
           touch = null;
           if (Math.abs(dx) > 80 && Math.abs(dx) > Math.abs(dy)*1.5) navigate(dx < 0 ? 1 : -1);
