@@ -94,6 +94,8 @@
   let inlineEditingSongId = null;
   let inlineEditingMode = null;
   let inlineEditDraft = '';
+  let inlineCaretOnBlur = null;
+  let lastSavedInlinePosition = null;
   let editingSetlistId = null;
   let confirmCallback = null;
   let confirmCancelCallback = null;
@@ -2474,19 +2476,51 @@
     inlineEditingSongId = song.id;
     inlineEditingMode = 'contenteditable';
     inlineEditDraft = song.content || '';
-    dom.songContent.textContent = inlineEditDraft;
-    renderContentEditableHighlight();
+    const editor = dom.songContent;
+    editor.textContent = inlineEditDraft;
     renderSongDetail();
+    renderContentEditableHighlight();
 
-    requestAnimationFrame(() => {
-      dom.songContent.focus();
-      const selection = window.getSelection();
-      if (selection) {
-        selection.selectAllChildren(dom.songContent);
-        selection.collapseToStart();
-      }
-    });
+    const saved = lastSavedInlinePosition;
+    const position = saved?.songId === song.id && saved.content === inlineEditDraft ? saved : null;
+    editor.focus({ preventScroll: true });
+    window.getSelection()?.collapse(editor.firstChild || editor, position?.offset ?? 0);
+    editor.scrollTop = position?.scrollTop ?? 0;
+    editor.scrollLeft = position?.scrollLeft ?? 0;
+    syncContentEditableHighlightScroll();
     announce(`Directly editing ${song.title}`);
+  }
+
+  function currentInlineCaret() {
+    const selection = window.getSelection();
+    if (!selection?.focusNode || !dom.songContent.contains(selection.focusNode)) return null;
+    const caret = document.createRange();
+    caret.setStart(selection.focusNode, selection.focusOffset);
+    caret.collapse(true);
+    return caret;
+  }
+
+  function rememberInlinePosition(song) {
+    const editor = dom.songContent;
+    const caret = (document.activeElement !== editor && inlineCaretOnBlur) || currentInlineCaret();
+    const { scrollTop, scrollLeft } = editor;
+    let offset = 0;
+    if (caret && editor.contains(caret.startContainer)) {
+      if (editor.childElementCount === 0) {
+        const prefix = caret.cloneRange();
+        prefix.setStart(editor, 0);
+        offset = prefix.toString().replace(/\r\n?/g, '\n').length;
+      } else {
+        // Measure against the same innerText serialization used by Save. Selection.toString()
+        // can omit newlines between BRs and blocks. The saved draft already excludes the marker.
+        const marker = document.createTextNode(generateId());
+        caret.insertNode(marker);
+        offset = readContentEditableDraft().indexOf(marker.data);
+        marker.remove();
+      }
+    }
+    lastSavedInlinePosition = { songId: song.id, content: song.content,
+      offset: Math.max(0, Math.min(offset, song.content.length)), scrollTop, scrollLeft };
   }
 
   function startLegacyInlineEdit() {
@@ -2587,6 +2621,7 @@
     }
 
     song.content = inlineEditDraft;
+    rememberInlinePosition(song);
     song.updatedAt = Date.now();
     finishInlineEditState();
     saveSongs();
@@ -2664,6 +2699,7 @@
     inlineEditingMode = null;
     inlineEditDraft = '';
     clearInlineEditorPosition();
+    inlineCaretOnBlur = null;
     if (typeof NativeBridge !== 'undefined') NativeBridge.notifyUiReady?.();
   }
 
@@ -3060,6 +3096,9 @@
     $('btn-save-content-edit').addEventListener('click', saveContentEditableInlineEdit);
     $('btn-cancel-content-edit').addEventListener('click', cancelContentEditableInlineEdit);
     dom.songContent.addEventListener('input', updateContentEditableDraft);
+    dom.songContent.addEventListener('blur', () => {
+      if (inlineEditingMode === 'contenteditable') inlineCaretOnBlur = currentInlineCaret();
+    });
     dom.songContent.addEventListener('scroll', syncContentEditableHighlightScroll);
     dom.songContent.addEventListener('keydown', (e) => {
       if (inlineEditingMode !== 'contenteditable') return;
@@ -3702,6 +3741,7 @@
   }
 
   function resetNativeAccount() {
+    lastSavedInlinePosition = null;
     dom.setlistSongs?._sorter?.cancel();
     navigationHistory = [];
     stopAutoScroll();

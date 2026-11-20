@@ -513,13 +513,14 @@ test('account reset clears source editor, selections and previous undo callback'
   });
   vm.runInContext("let inlineEditingSongId = 'same-id-in-another-account', inlineEditingMode = 'contenteditable';\n" +
     "let inlineEditDraft = 'private unsaved song', selectedSongId = 'a', selectedSetlistId = 'b';\n" +
+    "let lastSavedInlinePosition = { songId: 'a', offset: 9 }, inlineCaretOnBlur = {};\n" +
     "let viewingSetlistSongIndex = 1, viewingFromSetlistId = 'b', editingSongId = 'a', editingSetlistId = 'b';\n" +
     'let transposeSteps = 7, undoTimer = 123, undoData = {};\n' +
     sourceFunction('finishInlineEditState') + '\n' + sourceFunction('resetNativeAccount') +
     '\nresetNativeAccount();\n' +
-    'globalThis.result = { inlineEditingSongId, inlineEditDraft, selectedSongId, selectedSetlistId, ' +
+    'globalThis.result = { inlineEditingSongId, inlineEditDraft, lastSavedInlinePosition, inlineCaretOnBlur, selectedSongId, selectedSetlistId, ' +
     'viewingSetlistSongIndex, viewingFromSetlistId, editingSongId, editingSetlistId, transposeSteps, undoTimer, undoData };', context);
-  for (const key of ['inlineEditingSongId', 'selectedSongId', 'selectedSetlistId', 'viewingFromSetlistId',
+  for (const key of ['inlineEditingSongId', 'lastSavedInlinePosition', 'inlineCaretOnBlur', 'selectedSongId', 'selectedSetlistId', 'viewingFromSetlistId',
     'editingSongId', 'editingSetlistId', 'undoTimer', 'undoData']) assert.equal(context.result[key], null, key);
   assert.equal(context.result.inlineEditDraft, '');
   assert.equal(context.result.viewingSetlistSongIndex, -1);

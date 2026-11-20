@@ -183,6 +183,67 @@
       await checkKeyboardPalette('song-chord-palette', editor);
       editor.value = ''; $('btn-close-song-modal').click(); $('btn-inline-edit').click(); await settled();
     });
+    await check('a tap on a wrapped lyric edits that character and Save restores the caret and scroll', async () => {
+      const editor = $('song-content'), highlight = $('contenteditable-highlight');
+      const save = $('btn-save-content-edit'), edit = $('btn-inline-edit');
+      const song = Array.from({ length: 110 }, (_, i) =>
+        `[Verse ${i}]\nC| G| ${'lyric '.repeat(1 + i % 19)}line-${i} ends here`).join('\n\n');
+      const marker = 'line-65';
+      editor.textContent = song;
+      editor.dispatchEvent(new Event('input', { bubbles: true }));
+      save.click();
+      edit.click();
+      await settled();
+      assert(editor.scrollHeight > editor.clientHeight * 3, 'Fixture needs a scrolling sheet');
+
+      // Derive the tap from the visible lyric and let the browser hit-test the transparent editor.
+      const walker = document.createTreeWalker(highlight, NodeFilter.SHOW_TEXT);
+      let lyric = walker.nextNode();
+      while (lyric && !lyric.data.includes(marker)) lyric = walker.nextNode();
+      assert(lyric, 'Missing highlighted lyric');
+      const glyph = document.createRange();
+      const column = lyric.data.indexOf(marker) + 2;
+      glyph.setStart(lyric, column);
+      glyph.setEnd(lyric, column + 1);
+      editor.scrollTop += glyph.getBoundingClientRect().top - editor.getBoundingClientRect().top - editor.clientHeight / 2;
+      await settled();
+      const rect = glyph.getBoundingClientRect(), x = rect.left + rect.width / 4, y = rect.top + rect.height / 2;
+      const target = document.elementFromPoint(x, y);
+      assert(target === editor, `Lyric at ${Math.round(x)},${Math.round(y)} hit ${target?.id || target?.className} (editor height ${editor.clientHeight})`);
+      const hit = document.caretRangeFromPoint(x, y);
+      getSelection().collapse(hit.startContainer, hit.startOffset);
+      document.execCommand('insertText', false, '*');
+      const index = song.indexOf(marker) + 2;
+      const expected = song.slice(0, index) + '*' + song.slice(index);
+      assert(editor.innerText === expected, 'Tap inserted at a different lyric');
+      const scrollTop = editor.scrollTop;
+
+      save.focus(); // A toolbar Save takes focus before its click handler runs.
+      save.click();
+      edit.click();
+      await settled();
+      assert(document.activeElement === editor && getSelection().focusNode === editor.firstChild &&
+        getSelection().focusOffset === index + 1, 'Reopening lost the saved caret');
+      assert(Math.abs(editor.scrollTop - scrollTop) < 2, 'Reopening lost the saved scroll position');
+      document.execCommand('insertText', false, '!');
+      assert(editor.innerText === expected.replace('*', '*!'), 'Typing did not resume at the saved position');
+
+      save.click();
+      edit.click();
+      getSelection().collapse(editor.firstChild, 3);
+      await settled();
+      assert(getSelection().focusOffset === 3, 'Opening the editor overrode a new caret placement');
+    });
+    await check('a keyboard save remembers the caret after browser-generated line breaks', async () => {
+      const editor = $('song-content');
+      editor.innerHTML = 'Intro<br><br><div>Second verse</div><div>Last line</div>';
+      const initial = editor.innerText;
+      getSelection().collapse(editor.lastChild.firstChild, 4);
+      editor.dispatchEvent(new KeyboardEvent('keydown', { key: 's', ctrlKey: true, bubbles: true, cancelable: true }));
+      $('btn-inline-edit').click();
+      document.execCommand('insertText', false, '!');
+      assert(editor.innerText === initial.replace('Last line', 'Last! line'), 'Keyboard Save lost a rendered newline in the caret offset');
+    });
     form('inline-chord-palette','');textRange(0);
     results.push(results.some(line=>line.startsWith('FAIL'))?'CHECKS FAILED':`ALL ${results.length} CHECKS PASSED; inline preview ready.`);
   } catch(error) { results.push('BOOT FAILED: '+error.stack); }

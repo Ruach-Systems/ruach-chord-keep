@@ -1942,6 +1942,23 @@ body:has(.sidebar.open) .fab {
   overflow: hidden;
 }
 
+/* Keep the painted lyrics and native hit targets on the same wrapped lines. */
+.song-content.is-content-editing,
+.contenteditable-highlight {
+  scrollbar-gutter: stable;
+  line-break: auto;
+}
+
+.contenteditable-highlight :is(.chord, .bracket-command) {
+  font-weight: inherit;
+  font-style: inherit;
+}
+
+.contenteditable-highlight::after {
+  /* The caret can occupy the empty line after a final newline. */
+  content: '\200B';
+}
+
 .song-content-section.is-content-editing .song-content.is-content-editing {
   height: 100%;
   min-height: 0;
@@ -3946,7 +3963,6 @@ body:has(.sidebar.open) .fab {
   transition:
     opacity 0.3s ease,
     transform 0.3s ease;
-  pointer-events: auto;
   white-space: nowrap;
 }
 
