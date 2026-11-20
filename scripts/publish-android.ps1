@@ -12,11 +12,19 @@ $output = Get-ReleaseDirectory 'android' $Version
 $root = Split-Path -Parent $PSScriptRoot
 Push-Location $root
 try {
+    # Restore only the Android runtime packs. The publish CLI can infer the Windows
+    # host RID during its implicit restore and request a nonexistent Mono.win-x64 pack.
+    $project = 'src/ChordLibrary.Native/ChordLibrary.Native.csproj'
+    $androidBuild = @('-p:ChordKeepAndroidOnly=true', '-p:Configuration=Release',
+        '-p:UseCurrentRuntimeIdentifier=false', '-p:UseDefaultPublishRuntimeIdentifier=false',
+        '-p:AndroidPackageFormats=apk')
+    & dotnet restore $project @androidBuild --nologo
+    Assert-NativeSuccess 'Android release restore'
     # env: keeps passwords out of command-line arguments and build logs. APK only;
     # AAB signing uses a different password transport and is not part of this workflow.
-    & dotnet publish src/ChordLibrary.Native/ChordLibrary.Native.csproj -f net10.0-android -c Release `
-        -p:ChordKeepAndroidOnly=true "-p:ApplicationDisplayVersion=$Version" "-p:ApplicationVersion=$BuildNumber" `
-        -p:AndroidPackageFormats=apk -p:AndroidKeyStore=true "-p:AndroidSigningKeyStore=$KeystorePath" `
+    & dotnet publish $project @androidBuild -f net10.0-android --no-restore `
+        "-p:ApplicationDisplayVersion=$Version" "-p:ApplicationVersion=$BuildNumber" `
+        -p:AndroidKeyStore=true "-p:AndroidSigningKeyStore=$KeystorePath" `
         "-p:AndroidSigningKeyAlias=$KeyAlias" -p:AndroidSigningStorePass=env:ANDROID_STORE_PASSWORD `
         -p:AndroidSigningKeyPass=env:ANDROID_KEY_PASSWORD -o "$output/publish" --nologo
     Assert-NativeSuccess 'Android publish'
