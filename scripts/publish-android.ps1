@@ -15,7 +15,7 @@ try {
     # env: keeps passwords out of command-line arguments and build logs. APK only;
     # AAB signing uses a different password transport and is not part of this workflow.
     & dotnet publish src/ChordLibrary.Native/ChordLibrary.Native.csproj -f net10.0-android -c Release `
-        "-p:ApplicationDisplayVersion=$Version" "-p:ApplicationVersion=$BuildNumber" `
+        -p:ChordKeepAndroidOnly=true "-p:ApplicationDisplayVersion=$Version" "-p:ApplicationVersion=$BuildNumber" `
         -p:AndroidPackageFormats=apk -p:AndroidKeyStore=true "-p:AndroidSigningKeyStore=$KeystorePath" `
         "-p:AndroidSigningKeyAlias=$KeyAlias" -p:AndroidSigningStorePass=env:ANDROID_STORE_PASSWORD `
         -p:AndroidSigningKeyPass=env:ANDROID_KEY_PASSWORD -o "$output/publish" --nologo
